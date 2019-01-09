@@ -24,7 +24,7 @@ the following components:
 * price
 * ISBN
 
-Copyright Ian Vermes 2019
+Copyright: Ian Vermes 2019
 """
 
 import exceptions

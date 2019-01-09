@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
-"""Unit test of core.py.
+"""Integration test of core.py.
 
-Copyright Ian Vermes 2018
+Copyright: Ian Vermes 2019
 """
 
 from tests.base_testcases import BaseTestCase

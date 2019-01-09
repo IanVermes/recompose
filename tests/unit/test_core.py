@@ -3,7 +3,7 @@
 
 """Unit test of main/core.py.
 
-Copyright Ian Vermes 2019
+Copyright: Ian Vermes 2019
 """
 from tests.base_testcases import BaseTestCase
 import core

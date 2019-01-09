@@ -3,7 +3,7 @@
 
 """Recompose Exceptions
 
-Copyright Ian Vermes 2019
+Copyright: Ian Vermes 2019
 """
 
 

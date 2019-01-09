@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 """Unit test of resources directory.
 
-Copyright Ian Vermes 2019
+Copyright: Ian Vermes 2019
 """
 
 from tests.base_testcases import BaseTestCase

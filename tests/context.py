@@ -21,6 +21,8 @@ or
 
 >>> from tests.base_testcases import ExtendedTestCase
 >>> import <some main pkg module>
+
+Copyright: Ian Vermes 2019
 """
 
 
