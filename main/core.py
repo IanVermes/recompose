@@ -26,8 +26,8 @@ the following components:
 
 Copyright: Ian Vermes 2019
 """
-
 import exceptions
+from helpers.argparse import RecomposeArgParser
 
 import os
 
@@ -47,10 +47,28 @@ class _TestingPrimitive():
         raise package_base_eror
 
 
-def main():
+def main(xml_filename, output_filename):
     """Entry point."""
-    pass
+    ext = os.path.splitext(xml_filename)[1]
+    if ext != ".xml":
+        msg = (f"The file '{os.path.basename(xml_filename)}' is incompatible"
+               "with this program. Please use Microsoft Word to generate a"
+               "suitable XML file. This can be accomplised as follows: 1) Open"
+               "the document in Microsoft Word, 2) in the menubar go to 'File'"
+               "> 'Save As...' to open as dialog window, 3) choose the 'File"
+               "Format' called XML from the spinner at the bottom of the dialog"
+               "window, 4) choose a suitable location to save the file, 5)"
+               " click 'Save'.\nNow run this program again with the new XML"
+               "file.")
+        raise TypeError(msg)
+    else:
+        with open(output_filename, "w") as handle:
+            handle.write("foo")
+        return
 
 
 if __name__ == '__main__':
-    main()
+    argparser = RecomposeArgParser()
+    args = argparser.get_args()
+    kwargs = {"xml_filename": args.input, "output_filename": args.output}
+    main(**kwargs)
