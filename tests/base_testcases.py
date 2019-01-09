@@ -40,7 +40,8 @@ class CommandLineTestCase(BaseTestCase):
 
         return stdout
 
-    def format_cmd(self, cmd_template, template_kwargs):
+    @classmethod
+    def format_cmd(cls, cmd_template, template_kwargs):
         """Create a safe commandline command."""
         # Precondition 1
         curly_left = cmd_template.count(r"{")
