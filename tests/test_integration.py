@@ -118,11 +118,8 @@ class UserStories_CommandLine(CommandLineTestCase):
 
         # User informed of bad file in commandline
         self.assertTrue(stdout)
-        self.assertIn("incompatible", stdout.lower())
-        self.assertIn("error", stdout.lower())
-        self.assertIn("microsoft word", stdout.lower())
-        self.assertIn("save as...", stdout.lower())
-        self.assertIn("xml", stdout.lower())
+        subs = ["incompatible", "error", "microsoft word", "save as...", "xml"]
+        self.assertSubstringsInString(substrings=subs, string=stdout.lower())
 
     def test_command_line_entry_no_file(self):
         # User invokes main.core with no arguments
@@ -134,7 +131,8 @@ class UserStories_CommandLine(CommandLineTestCase):
 
         # User informed of expected argument
         self.assertTrue(stdout)
-        self.assertIn("usage", stdout.lower())
+        self.assertSubstringsInString(substrings=["usage"],
+                                      string=stdout.lower())
 
     def test_command_line_entry_help(self):
         # User invokes main.core with help argument
@@ -146,7 +144,8 @@ class UserStories_CommandLine(CommandLineTestCase):
 
         # User provided helpful information
         self.assertTrue(stdout)
-        self.assertIn("help", stdout.lower())
+        self.assertSubstringsInString(substrings=["help"],
+                                      string=stdout.lower())
 
 
 if __name__ == '__main__':

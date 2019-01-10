@@ -20,6 +20,34 @@ tests.context.main()
 class BaseTestCase(unittest.TestCase):
     """Base testcase for the suite."""
 
+    def assertSubstringsInString(self, substrings, string, msg=None):
+        # Precondition
+        if isinstance(substrings, str):
+            substrings = [substrings]  # Rather than raise a type error.
+        if not substrings:
+            errmsg = f"Positional argument 1 is invalid: {repr(substrings)}"
+            raise ValueError(errmsg)
+        if not string:
+            errmsg = f"Positional argument 2 is invalid: {repr(string)}"
+            raise ValueError(errmsg)
+        # Main loop
+        absent = [sub for sub in substrings if sub not in string]
+        if len(absent) > 0:
+            # The assertion has failed: some/all substrings absent from string
+            def spaceing(n_spaces):
+                return "\n" + " " * n_spaces
+            detail = "".join([(spaceing(8) + "- " + s) for s in absent])
+            errmsg = (f"{len(substrings) - len(absent)} out of "
+                      f"{len(substrings)} substrings were found in the string."
+                      f"{spaceing(4)}Unexpectly missing:"
+                      f"{detail}")
+            if msg:
+                errmsg = errmsg + f"{spaceing(4)}Custom message : {msg}"
+            raise AssertionError(errmsg)
+        elif len(absent) == 0:
+            # The assertion has passed: all substrings in string
+            return
+
     def assertFileInDirectory(self, file, directory, msg=None):
         files = set(os.path.basename(f) for f in os.listdir(directory))
         file_basename = os.path.basename(file)

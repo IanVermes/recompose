@@ -12,7 +12,77 @@ import unittest
 import os
 
 
-class Test_BaseTestCase_AssertMethods(BaseTestCase):
+class Test_BaseTestCase_AssertMethods_Strings(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.string = """Lorem ipsum dolor sit amet, consectetur adipiscing
+elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi
+ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa
+qui officia deserunt mollit anim id est laborum.
+"""
+        cls.all_subs = ["Lorem", "ipsum", "consequat", "dolor", "Excepteur",
+                        "esse", "in", "est", "voluptate"]
+        cls.some_overlap_subs = ["Lorem", "ipsum", "consequat", "foobar",
+                                 "pedestrian", "doctor"]
+        cls.no_subs = ["foobar", "George", "president", "light", "down",
+                       "extinguish"]
+
+    def test_all_substrings_present(self):
+        subs = self.all_subs
+
+        self.assertSubstringsInString(substrings=subs, string=self.string)
+
+
+    def test_some_substrings_present(self):
+        subs = self.some_overlap_subs
+
+        with self.assertRaises(AssertionError) as failure:
+            self.assertSubstringsInString(substrings=subs, string=self.string)
+
+        err_msg_subs = ["3", "6", "unexpectly missing"] + subs[-3:]
+        self.assertSubstringsInString(substrings=err_msg_subs,
+                                      string=str(failure.exception).lower(),
+                                      msg=f"orginal: {str(failure.exception)}")
+
+    def test_no_substrings_present(self):
+        subs = self.no_subs
+
+        with self.assertRaises(AssertionError) as failure:
+            self.assertSubstringsInString(substrings=subs, string=self.string)
+
+        err_msg_subs = ["0", "6", "unexpectly missing"] + subs[-3:]
+        self.assertSubstringsInString(substrings=err_msg_subs,
+                                      string=str(failure.exception).lower(),
+                                      msg=f"orginal: {str(failure.exception)}")
+
+    def test_empty_substrings(self):
+        subs = []
+
+        with self.assertRaises(ValueError):
+            self.assertSubstringsInString(substrings=subs, string=self.string)
+
+    def test_string_not_list_as_substring(self):
+        subs_present = "Lorem ipsum dolor"
+        subs_absent = "This archaic concept"
+
+        self.assertSubstringsInString(substrings=subs_present,
+                                      string=self.string)
+        with self.assertRaises(AssertionError):
+            self.assertSubstringsInString(substrings=subs_absent,
+                                          string=self.string)
+
+    def test_empty_string(self):
+        subs = self.some_overlap_subs
+
+        with self.assertRaises(ValueError):
+            self.assertSubstringsInString(substrings=subs, string="")
+
+
+class Test_BaseTestCase_AssertMethods_Files(BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
