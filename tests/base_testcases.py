@@ -11,6 +11,7 @@ import tests.context
 import unittest
 import shlex
 import subprocess
+import os
 
 # To allow consistent imports of pkg modules
 tests.context.main()
@@ -20,10 +21,20 @@ class BaseTestCase(unittest.TestCase):
     """Base testcase for the suite."""
 
     def assertFileInDirectory(self, file, directory, msg=None):
-        pass
+        files = set(os.path.basename(f) for f in os.listdir(directory))
+        file_basename = os.path.basename(file)
+        if msg is not None:
+            self.assertIn(file_basename, files, msg=msg)
+        else:
+            self.assertIn(file_basename, files)
 
     def assertFileNotInDirectory(self, file, directory, msg=None):
-        pass
+        files = set(os.path.basename(f) for f in os.listdir(directory))
+        file_basename = os.path.basename(file)
+        if msg is not None:
+            self.assertNotIn(file_basename, files, msg=msg)
+        else:
+            self.assertNotIn(file_basename, files)
 
 
 class CommandLineTestCase(BaseTestCase):

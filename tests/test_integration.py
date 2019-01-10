@@ -78,9 +78,6 @@ class UserStories_CommandLine(CommandLineTestCase):
         # Program yields defualt output file in the current working directory
         self.output_file = self.default_output_filename
         self.assertFileInDirectory(file=self.output_file, directory=os.getcwd())
-        # target_dir = os.getcwd()
-        # files = set(os.path.basename(f) for f in os.listdir(target_dir))
-        # self.assertIn(os.path.basename(self.output_file), files)
 
     def test_command_line_entry_correct_with_output_argument(self):
 
@@ -100,13 +97,9 @@ class UserStories_CommandLine(CommandLineTestCase):
 
         # Program yields output file at location specified
         self.assertFileInDirectory(file=self.output_file, directory=os.path.dirname(self.output_file))
-        # self.assertTrue(os.path.isfile(self.output_file))
 
         # Program does not name the output file with the default value
         self.assertFileNotInDirectory(file=self.default_output_filename, directory=os.getcwd())
-        # target_dir = os.getcwd()
-        # files = set(os.path.basename(f) for f in os.listdir(target_dir))
-        # self.assertNotIn(self.default_output_filename, files)
         self.assertNotEqual(self.default_output_filename, self.output_file)
 
     def test_command_line_entry_bad_file(self):
@@ -122,9 +115,6 @@ class UserStories_CommandLine(CommandLineTestCase):
         # No output file is made
         self.output_file = self.default_output_filename
         self.assertFileNotInDirectory(file=self.output_file, directory=os.getcwd())
-        # target_dir = os.getcwd()
-        # files = set(os.path.basename(f) for f in os.listdir(target_dir))
-        # self.assertNotIn(os.path.basename(self.output_file), files)
 
         # User informed of bad file in commandline
         self.assertTrue(stdout)
