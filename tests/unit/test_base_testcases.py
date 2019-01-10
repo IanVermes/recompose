@@ -5,10 +5,55 @@
 
 Copyright: Ian Vermes 2019
 """
-from tests.base_testcases import CommandLineTestCase
+from tests.base_testcases import BaseTestCase, CommandLineTestCase
 
+import tempfile
 import unittest
 import os
+
+
+class Test_BaseTestCase_AssertMethods(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.extant_file = "/usr/bin/python"
+        assert os.path.isfile(cls.extant_file)
+        cls.imaginary_file = "/usr/bin/foofoobarbar"
+        assert not os.path.isfile(cls.imaginary_file)
+
+        cls.extant_dir = "/usr/bin"
+        assert os.path.isdir(cls.extant_dir)
+
+    def test_file_in_directory(self):
+        filename = self.extant_file
+        dirname = self.extant_dir
+
+        self.assertFileInDirectory(file=filename, directory=dirname)
+
+        with self.assertRaises(AssertionError):
+            self.assertFileNotInDirectory(file=filename, directory=dirname)
+
+    def test_file_not_in_directory(self):
+        filename = self.imaginary_file
+        dirname = self.extant_dir
+
+        self.assertFileNotInDirectory(file=filename, directory=dirname)
+
+        with self.assertRaises(AssertionError):
+            self.assertFileInDirectory(file=filename, directory=dirname)
+
+    def test_temp_file_in_directory(self):
+        with tempfile.NamedTemporaryFile() as handle:
+            filename = handle.name
+            dirname = os.path.dirname(filename)
+
+            self.assertTrue(os.path.exists(filename))
+            self.assertFileInDirectory(file=filename, directory=dirname)
+
+        # Context manager closes/deletes the tempfile
+        self.assertTrue(os.path.exists(False))
+        self.assertFileNotInDirectory(file=filename, directory=dirname)
+
 
 
 class Test_CommandLineTestCase_Itself(CommandLineTestCase):

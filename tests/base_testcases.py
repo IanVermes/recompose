@@ -19,6 +19,12 @@ tests.context.main()
 class BaseTestCase(unittest.TestCase):
     """Base testcase for the suite."""
 
+    def assertFileInDirectory(self, file, directory, msg=None):
+        pass
+
+    def assertFileNotInDirectory(self, file, directory, msg=None):
+        pass
+
 
 class CommandLineTestCase(BaseTestCase):
 
