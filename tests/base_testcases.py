@@ -49,20 +49,43 @@ class BaseTestCase(unittest.TestCase):
             return
 
     def assertFileInDirectory(self, file, directory, msg=None):
-        files = set(os.path.basename(f) for f in os.listdir(directory))
-        file_basename = os.path.basename(file)
-        if msg is not None:
-            self.assertIn(file_basename, files, msg=msg)
-        else:
-            self.assertIn(file_basename, files)
+        assert_method = "in"
+        self._fileInOrNotInDirectory(file, directory,
+                                     method=assert_method, msg=msg)
 
     def assertFileNotInDirectory(self, file, directory, msg=None):
+        assert_method = "not in"
+        self._fileInOrNotInDirectory(file, directory,
+                                     method=assert_method, msg=msg)
+
+    def _fileInOrNotInDirectory(self, file, directory, method, msg=None):
+        # Preconditions
+        if not file:
+            errmsg = f"Filename is not valid: {repr(file)}."
+            if file == "":
+                errmsg += "Empty strings are forbidden."
+            elif file is None:
+                raise TypeError(errmsg)
+            raise ValueError(errmsg)
+
+        if not directory:
+            directory = "."
+        # Main
+        funcs = {"in": self.assertIn, "not in": self.assertNotIn}
+        try:
+            assertion_func = funcs[method]
+        except KeyError:
+            errmsg = (f"Illegal value method={repr(method)}. Use 'in' for "
+                       "self.assertIn or 'not in' for self.assertNotIn.")
+            raise ValueError(errmsg)
+
         files = set(os.path.basename(f) for f in os.listdir(directory))
         file_basename = os.path.basename(file)
         if msg is not None:
-            self.assertNotIn(file_basename, files, msg=msg)
+            assertion_func(file_basename, files, msg=msg)
         else:
-            self.assertNotIn(file_basename, files)
+            assertion_func(file_basename, files)
+
 
 
 class CommandLineTestCase(BaseTestCase):

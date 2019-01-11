@@ -124,6 +124,48 @@ class Test_BaseTestCase_AssertMethods_Files(BaseTestCase):
         self.assertTrue(os.path.exists(False))
         self.assertFileNotInDirectory(file=filename, directory=dirname)
 
+    def test_filename_arg_is_empty_string(self):
+        filename = ""
+        dirname = os.path.dirname(filename)
+        expected_substrings = ["empty string", "filename"]
+
+        with self.assertRaises(ValueError) as fail_first:
+            self.assertFileNotInDirectory(file=filename, directory=dirname)
+
+        with self.assertRaises(ValueError) as fail_second:
+            self.assertFileInDirectory(file=filename, directory=dirname)
+
+        self.assertSubstringsInString(substrings=expected_substrings,
+                                      string=str(fail_first.exception).lower())
+        self.assertSubstringsInString(substrings=expected_substrings,
+                                      string=str(fail_second.exception).lower())
+
+    def test_directory_arg_is_empty_string(self):
+        # Setup: Find a file in the current work directory or abort!
+        for item in os.listdir(os.getcwd()):
+            if os.path.isfile(item):
+                target_file = os.path.basename(item)
+                break
+            else:
+                continue
+        else:
+            errmsg = (f"To run this test, invoking unittest from commandline "
+                      "must be done from a directory that has any file. If a "
+                      "file can't be found in the current working directory "
+                      "then the test cannot continue.")
+            raise RuntimeError(errmsg)
+
+        filename = os.path.basename(target_file)
+        dirname = os.path.dirname(target_file)
+
+        self.assertTrue(os.path.isfile(filename))
+        self.assertEqual(dirname, "")
+
+        self.assertFileInDirectory(file=filename, directory=dirname)
+
+        with self.assertRaises(AssertionError):
+            self.assertFileNotInDirectory(file=filename, directory=dirname)
+
 
 
 class Test_CommandLineTestCase_Itself(CommandLineTestCase):
@@ -222,3 +264,7 @@ class Test_CommandLineTestCase_Itself(CommandLineTestCase):
 
         with self.assertRaises(AssertionError):
             self.invoke_cmd_via_commandline(cmd, given_status)
+
+
+if __name__ == '__main__':
+    unittest.main()

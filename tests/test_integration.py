@@ -37,6 +37,30 @@ class UserStories_CommandLine(CommandLineTestCase):
                                        {"filename_script": core_py})
         assert "filename_script" not in cls.cmd_basic
 
+    @property
+    def output_file(self):
+        return self._output_file
+
+    @output_file.setter
+    def output_file(self, value):
+        self._output_file = value
+        try:
+            self._output_file_list.append(value)
+        except AttributeError:
+            self._output_file_list = [value]
+
+    def clear_output_files(self):
+        try:
+            output_files = self._output_file_list
+        except AttributeError:
+            # Forgive unset attribute as no files were ever set to remove
+            return
+        else:
+            for filename in output_files:
+                if filename and os.path.exists(filename):
+                    os.remove(filename)
+            self.output_file = ""
+
     def setUp(self):
         # This variable is not local to test methods so that the tearDown
         # method can catch the filename when out of test scope. The setUp
@@ -45,10 +69,7 @@ class UserStories_CommandLine(CommandLineTestCase):
 
     def tearDown(self):
         # The output file is removed after each test
-        outfile = self.output_file
-        if outfile and os.path.exists(outfile):
-            os.remove(outfile)
-            self.output_file = ""
+        self.clear_output_files()
 
     def test_command_line_entry_basic(self):
         # User invokes main.core
@@ -81,26 +102,37 @@ class UserStories_CommandLine(CommandLineTestCase):
 
     def test_command_line_entry_correct_with_output_argument(self):
 
-        # User invokes main.core with an XML file and specified output
-        cmd_template = self.cmd_basic + " {file_argument}" + " {file_output}"
-        self.output_file = os.path.abspath(os.path.expanduser("~/Desktop/custom_output.xml"))
-        substring = {"file_argument": self.good_file,
-                     "file_output": self.output_file}
-        cmd = self.format_cmd(cmd_template, substring)
+        def user_story(self, output_file):
+            # User invokes main.core with an XML file and specified output
+            cmd_template = self.cmd_basic + " {file_argument}" + " {file_output}"
+            self.output_file = output_file
+            substring = {"file_argument": self.good_file,
+                         "file_output": self.output_file}
+            cmd = self.format_cmd(cmd_template, substring)
 
-        # Program exits cleanly
-        status = 0
-        stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
+            # Program exits cleanly
+            status = 0
+            stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
 
-        # User sees nothing in stdout, all assumed to go well
-        self.assertFalse(stdout)
+            # User sees nothing in stdout, all assumed to go well
+            self.assertFalse(stdout)
 
-        # Program yields output file at location specified
-        self.assertFileInDirectory(file=self.output_file, directory=os.path.dirname(self.output_file))
+            # Program yields output file at location specified
+            self.assertFileInDirectory(file=self.output_file, directory=os.path.dirname(self.output_file))
 
-        # Program does not name the output file with the default value
-        self.assertFileNotInDirectory(file=self.default_output_filename, directory=os.getcwd())
-        self.assertNotEqual(self.default_output_filename, self.output_file)
+            # Program does not name the output file with the default value
+            self.assertFileNotInDirectory(file=self.default_output_filename, directory=os.getcwd())
+            self.assertNotEqual(self.default_output_filename, self.output_file)
+
+        expanduser = os.path.expanduser
+        abspath = os.path.abspath
+        basename = "custom_output.xml"
+        user_specified_filenames = [expanduser(f"~/Desktop/{basename}"),
+                                    "foo" + basename,
+                                    abspath(basename)]
+        for output_filename in user_specified_filenames:
+            with self.subTest(filename=output_filename):
+                user_story(self, output_file=output_filename)
 
     def test_command_line_entry_bad_file(self):
         # User invokes main.core without an XML file
