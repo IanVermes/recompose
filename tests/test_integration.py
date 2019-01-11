@@ -9,6 +9,8 @@ Copyright: Ian Vermes 2019
 from tests.base_testcases import CommandLineTestCase
 from main import core
 
+from lxml import etree
+
 import unittest
 import os
 
@@ -36,6 +38,12 @@ class UserStories_CommandLine(CommandLineTestCase):
         cls.cmd_basic = cls.format_cmd(cmd_basic_template,
                                        {"filename_script": core_py})
         assert "filename_script" not in cls.cmd_basic
+
+        # Schema XSD file
+        schema_filename = "/Users/Ian/Google Drive/code/next_gen_xml/recompose/resources/jjs_schema_1.1.xsd"
+        assert os.path.isfile(schema_filename)
+        cls.schema = etree.XMLSchema(etree.parse(schema_filename))
+
 
     @property
     def output_file(self):
@@ -100,6 +108,9 @@ class UserStories_CommandLine(CommandLineTestCase):
         self.output_file = self.default_output_filename
         self.assertFileInDirectory(file=self.output_file, directory=os.getcwd())
 
+        # outputfile validation
+        self.user_story_after_successful_execution(status)
+
     def test_command_line_entry_correct_with_output_argument(self):
 
         def user_story(self, output_file):
@@ -124,15 +135,22 @@ class UserStories_CommandLine(CommandLineTestCase):
             self.assertFileNotInDirectory(file=self.default_output_filename, directory=os.getcwd())
             self.assertNotEqual(self.default_output_filename, self.output_file)
 
+            return status
+
+        # Setup
         expanduser = os.path.expanduser
         abspath = os.path.abspath
         basename = "custom_output.xml"
         user_specified_filenames = [expanduser(f"~/Desktop/{basename}"),
                                     "foo" + basename,
                                     abspath(basename)]
+
+        # A user chooses a filename for the output file
         for output_filename in user_specified_filenames:
             with self.subTest(filename=output_filename):
-                user_story(self, output_file=output_filename)
+                # User story continues within definition
+                status = user_story(self, output_file=output_filename)
+                self.user_story_after_successful_execution(status)
 
     def test_command_line_entry_bad_file(self):
         # User invokes main.core without an XML file
@@ -178,6 +196,28 @@ class UserStories_CommandLine(CommandLineTestCase):
         self.assertTrue(stdout)
         self.assertSubstringsInString(substrings=["help"],
                                       string=stdout.lower())
+
+    # USER STORIES: sub-stories
+
+    def user_story_after_successful_execution(self, status):
+        # Program exited cleanly
+        self.assertEqual(0, status)
+
+        # Output file was written
+        self.assertTrue(os.path.isfile(self.output_file))
+
+        # Output file is XML and the XML satisfies an XSD schema
+        schema = self.schema
+        try:
+            parsed_xml = etree.parse(self.output_file)
+        except etree.XMLSyntaxError as err:
+            detail = str(err).splitlines()[0]
+            errmsg = f"Could not parse file: {detail}"
+        else:
+            errmsg = ""
+        if errmsg:
+            self.fail(errmsg)
+        self.assertTrue(schema.validate(parsed_xml))
 
 
 if __name__ == '__main__':
