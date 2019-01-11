@@ -24,7 +24,9 @@ class TestResourcesPresent(BaseTestCase):
     def setUpClass(cls):
         cls.files = {"Pretty BR Autumn 2018.xml",
                      "069_02_autumn_2018_books_received.pdf",
-                     "BR Autumn 2018.docx"}
+                     "BR Autumn 2018.docx",
+                     "jjs_schema_1.1.xsd",
+                     "invlaid_input.xml"}
         cls.dir = "./resources"
 
     def test_directory_present(self):
