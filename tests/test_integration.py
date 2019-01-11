@@ -24,6 +24,7 @@ class UserStories_CommandLine(CommandLineTestCase):
         exists = os.path.isfile
         cls.good_file = absolute("./resources/Pretty BR Autumn 2018.xml")
         cls.bad_file = absolute("./resources/BR Autumn 2018.docx")
+        cls.decoy_file = absolute("./resources/invlaid_input.xml")
         files = (cls.good_file, cls.bad_file)
         assert all([exists(f) for f in files]), {f: exists(f) for f in files}
 
@@ -153,23 +154,33 @@ class UserStories_CommandLine(CommandLineTestCase):
                 self.user_story_after_successful_execution(status)
 
     def test_command_line_entry_bad_file(self):
-        # User invokes main.core without an XML file
-        cmd_template = self.cmd_basic + " {file_argument}"
-        substring = {"file_argument": self.bad_file}
-        cmd = self.format_cmd(cmd_template, substring)
 
-        # Program exits abruptly
-        status = 1
-        stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
+        def user_story(self, input_filename):
+            # User invokes main.core without an XML file
+            cmd_template = self.cmd_basic + " {file_argument}"
+            substring = {"file_argument": input_filename}
+            cmd = self.format_cmd(cmd_template, substring)
 
-        # No output file is made
-        self.output_file = self.default_output_filename
-        self.assertFileNotInDirectory(file=self.output_file, directory=os.getcwd())
+            # Program exits abruptly
+            status = 1
+            stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
 
-        # User informed of bad file in commandline
-        self.assertTrue(stdout)
-        subs = ["incompatible", "error", "microsoft word", "save as...", "xml"]
-        self.assertSubstringsInString(substrings=subs, string=stdout.lower())
+            # No output file is made
+            self.output_file = self.default_output_filename
+            self.assertFileNotInDirectory(file=self.output_file, directory=os.getcwd())
+
+            # User informed of bad file in commandline
+            self.assertTrue(stdout)
+            subs = ["incompatible", "error", "microsoft word", "save as...", "xml"]
+            self.assertSubstringsInString(substrings=subs, string=stdout.lower())
+
+        # A DOCX and unsuitable XML file are selected by the user
+        user_defined_input_files = [self.bad_file, self.decoy_file]
+        for input_filename in user_defined_input_files:
+
+            with self.subTest(infile=input_filename):
+                # User story continues within definition
+                user_story(self, input_filename)
 
     def test_command_line_entry_no_file(self):
         # User invokes main.core with no arguments
