@@ -94,16 +94,20 @@ class CommandLineTestCase(BaseTestCase):
         """Collects the stdout when invoking and validates the exit status."""
         status, stdout = subprocess.getstatusoutput(cmd)
 
+        detail = f"\n *** captured stdout:\nrepr{stdout}"
         if expected_status == 0:
-            self.assertEqual(status, 0,
-                             msg=f"'$ {cmd}': did not exit cleanly/validly.")
+            msg = (f"'$ {cmd}': did not exit cleanly/validly.")
+            msg += detail
+            self.assertEqual(status, 0, msg=msg)
         elif 0 < expected_status < 3:
-            self.assertGreater(status, 0,
-                               msg=(f"'$ {cmd}': should have exited with an "
-                                    "error but exited cleanly."))
+            msg = (f"'$ {cmd}': should have exited with an "
+                   "error but exited cleanly.")
+            msg += detail
+            self.assertGreater(status, 0, msg=msg)
         else:
             msg = (f"Got expected_status={repr(expected_status)}, "
                    "not int: 0 <= i < 3.")
+            msg += detail
             raise ValueError(msg)
 
         return stdout
