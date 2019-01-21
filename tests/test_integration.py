@@ -22,7 +22,7 @@ class UserStories_CommandLine(CommandLineTestCase):
         # Get input files
         absolute = os.path.abspath
         exists = os.path.isfile
-        cls.good_file = absolute("./resources/Pretty BR Autumn 2018.xml")
+        cls.good_file = absolute("./resources/BR Autumn 2018.xml")
         cls.bad_file = absolute("./resources/BR Autumn 2018.docx")
         cls.decoy_file = absolute("./resources/invlaid_input.xml")
         files = (cls.good_file, cls.bad_file)

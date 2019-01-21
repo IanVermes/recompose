@@ -97,6 +97,19 @@ class BaseTestCase(unittest.TestCase):
         else:
             assertion_func(file_basename, files)
 
+class InputFileTestCase(BaseTestCase):
+    """setUpClass assigns frequently used inputs to instance attributes."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.output = ""
+
+        cls.good_input = "./resources/BR Autumn 2018.xml"
+        os.path.isfile(cls.good_input)
+        cls.bad_input = "./resources/BR Autumn 2018.docx"
+        os.path.isfile(cls.bad_input)
+        cls.decoy_input = "./resources/invlaid_input.xml"
+        os.path.isfile(cls.decoy_input)
 
 
 class CommandLineTestCase(BaseTestCase):
