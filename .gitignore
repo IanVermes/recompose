@@ -107,3 +107,4 @@ venv.bak/
 resources/*.xml
 resources/*.pdf
 resources/*.docx
+resources/test_resources/*
