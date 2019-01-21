@@ -28,6 +28,7 @@ Copyright: Ian Vermes 2019
 """
 import exceptions
 from helpers.argparse import RecomposeArgParser
+from helpers.xml import XMLAsInput
 
 import os
 
@@ -47,11 +48,13 @@ class _TestingPrimitive():
         raise package_base_eror
 
 
-def main(xml_filename, output_filename):
+def main(input_filename, output_filename):
     """Entry point."""
-    ext = os.path.splitext(xml_filename)[1]
+    input = XMLAsInput()
+    input.is_suitable(input_filename, fatal=True)
+    ext = os.path.splitext(input_filename)[1]
     if ext != ".xml":
-        msg = (f"The file '{os.path.basename(xml_filename)}' is incompatible"
+        msg = (f"The file '{os.path.basename(input_filename)}' is incompatible"
                "with this program. Please use Microsoft Word to generate a"
                "suitable XML file. This can be accomplised as follows: 1) Open"
                "the document in Microsoft Word, 2) in the menubar go to 'File'"
