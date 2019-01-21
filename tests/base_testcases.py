@@ -20,6 +20,17 @@ tests.context.main()
 class BaseTestCase(unittest.TestCase):
     """Base testcase for the suite."""
 
+    def assertHasAttr(self, obj, attr, msg=None):
+        if hasattr(obj, attr):
+            return
+        else:
+            errmsg = f"{repr(obj)} has no attribute {repr(attr)}"
+            if msg:
+                errmsg += f" : {str(msg)}"
+            raise AssertionError(errmsg)
+
+
+
     def assertSubstringsInString(self, substrings, string, msg=None):
         # Precondition
         if isinstance(substrings, str):

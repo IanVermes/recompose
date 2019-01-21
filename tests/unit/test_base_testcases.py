@@ -11,6 +11,21 @@ import tempfile
 import unittest
 import os
 
+class Test_BaseTestCase_AssertMethods_HasAttr(BaseTestCase):
+
+    def test_assertion_method(self):
+        class Example():
+
+            def __init__(self):
+                self.foo = "foobar"
+
+        example = Example()
+
+        self.assertHasAttr(obj=example, attr="foo")
+
+        with self.assertRaises(AssertionError):
+            self.assertHasAttr(obj=example, attr="bar")
+
 
 class Test_BaseTestCase_AssertMethods_Strings(BaseTestCase):
 
