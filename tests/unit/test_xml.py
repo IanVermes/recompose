@@ -53,7 +53,6 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
 
         _result = self.multi_attr_test(attr, return_type)
 
-    @unittest.expectedFailure
     def test_attr_tree(self):
         attr = "tree"
         return_type = etree._ElementTree
@@ -111,7 +110,10 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
         if does_return:
             result = getattr(input, attr)
             self.assertIsNotNone(result)
-            self.assertTrue(len(result))
+            try:
+                self.assertTrue(len(result))
+            except TypeError:
+                self.assertTrue(result)
         else:
             assertmsg = "\nWrong error type!"
             with self.assertRaises(Exception, msg=assertmsg) as fail:
