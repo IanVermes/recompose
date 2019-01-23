@@ -55,3 +55,8 @@ class InputFileError(_CodedErrors):
     """For when the input file is not correct."""
 
     _strcode = "input_type"
+
+
+class InputOperationError(_CodedErrors, RuntimeError):
+
+    _strcode = "input_check_skipped"
