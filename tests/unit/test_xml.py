@@ -32,7 +32,7 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
         super().setUpClass()
         cls.klass = xml.XMLAsInput
         cls.package_exception = exceptions.RecomposeError
-        cls.attr_not_ready_exception = Exception
+        cls.attr_not_ready_exception = exceptions.InputOperationError
 
         cls._memo_inputs = {}
 
@@ -45,9 +45,8 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
         else:
             cls.input = input
 
-        cls.attr_files = {cls.good_input: True, cls.decoy_input: True, cls.bad_input: False}
+        cls.attr_files = {cls.good_input: True, cls.decoy_input: False, cls.bad_input: False}
 
-    @unittest.expectedFailure
     def test_attr_root(self):
         attr = "root"
         return_type = etree._Element
@@ -114,14 +113,15 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
             self.assertIsNotNone(result)
             self.assertTrue(len(result))
         else:
-            with self.assertRaises(RuntimeError) as fail:
+            assertmsg = "\nWrong error type!"
+            with self.assertRaises(Exception, msg=assertmsg) as fail:
                 result = getattr(input, attr)
             self.assertIsInstance(fail.exception, RuntimeError)
             self.assertIsInstance(fail.exception, self.attr_not_ready_exception)
             errmsg = str(fail.exception)
-            method = self.isSuitable.__name__
-            substrings = (f"run object method {method} before "
-                          "calling attributes").split()
+            method = input.isSuitable.__name__
+            substrings = (f"call object method {method} necessary "
+                          "attributes").split()
             self.assertSubstringsInString(substrings, errmsg)
 
 
