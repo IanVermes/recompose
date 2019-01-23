@@ -13,6 +13,8 @@ import exceptions
 
 from lxml import etree
 
+import os
+
 EXPECTED_PREFIXES = set(['xml', 'pkg', 'wps', 'wne', 'wpi', 'wpg', 'w15', 'w14',
                          'w', 'w10', 'wp', 'wp14', 'v', 'm', 'r', 'o', 'mv',
                          'mc', 'mo', 'wpc', 'a', 'sl', 'ds', 'xsi', 'dcmitype',
@@ -42,7 +44,7 @@ class XMLAsInput(_XMLAsInputBase):
     def _sniff(self, fileobject):
         try:
             fileobject.seek(0, 0)
-            lines = [fileobject.readline() for _ in range(2)]
+            lines = [fileobject.readline().strip() for _ in range(2)]
         except UnicodeDecodeError:
             boolean = False
         else:
@@ -98,7 +100,7 @@ class XMLAsInput(_XMLAsInputBase):
             suitable = self._battery_test(handle)
 
         if fatal and not suitable:
-            msg = f"foobar"
-            raise exceptions.RecomposeError(msg)
+            detail = os.path.basename(filename)
+            raise exceptions.InputFileError(detail=detail)
         else:
             return suitable

@@ -23,10 +23,17 @@ class _CodedErrors(RecomposeError):
 
     def __init__(self, *args, detail=None):
         if not self._strcode:
-            errmsg = (f"Class {self.__name__} has no value for _strcode "
-                      "class attribute.")
+            errmsg = (f"Exception {self.__class__.__name__} has no value for "
+                      "_strcode class attribute.")
             raise ValueError(errmsg)
         default_string = EXC_STRINGS[self._strcode]
+        # Challenge detail foramtting
+        needs_detail_format = "{detail}" in default_string
+        if not detail and needs_detail_format:
+            errmsg = (f"Exception {self.__class__.__name__} default message "
+                      "requires a string for the kwarg 'detail'. Unformatted "
+                      f"message:\n{repr(default_string)}.")
+            raise ValueError(errmsg)
         # Intercept arguments
         if any(args):
             first_arg = str(args[0])
@@ -34,8 +41,12 @@ class _CodedErrors(RecomposeError):
             args = (first_arg, *args[1:])
         else:
             first_arg = default_string
+        # Add detail
         if detail is not None:
-            first_arg = f"{first_arg} Detail: {detail}"
+            if needs_detail_format:
+                first_arg = first_arg.format(detail=detail)
+            else:
+                first_arg = f"{first_arg} Detail: {detail}"
         args = (first_arg, *args[1:])
         super().__init__(*args)
 
