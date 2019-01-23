@@ -52,6 +52,12 @@ class Test_Import(BaseTestCase):
 @unittest.skipIf(Test_Import.cant_import(), reason="Can't import exceptions.")
 class Test_Exceptions(BaseTestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.alternate_detail = "NECESSARY DETAIL STRING"
+
+
     def get_subclasses_only(self, module, parent_class):
         def subsample_pred(cls):
             flag1 = issubclass(cls, parent_class)
@@ -96,7 +102,7 @@ class Test_Exceptions(BaseTestCase):
 
                 arg_string = "Foobar - this error text!"
 
-                err = cls(arg_string)
+                err = self.instantiate_exception(cls, arg_string)
 
                 self.assertIn(arg_string, str(err))
 
@@ -110,9 +116,9 @@ class Test_Exceptions(BaseTestCase):
             counter += 1
             with self.subTest(cls_name=cls_name):
 
-                default = exceptions.EXC_STRINGS.get(cls._strcode, "")
+                default = self.get_default_string(cls, auto_format=True)
 
-                err = cls()
+                err = self.instantiate_exception(cls)
 
                 self.assertTrue(default, msg=f"{cls_name} no default string!")
                 self.assertEqual(default, str(err), msg=f"{repr(str(err))}")
@@ -127,21 +133,56 @@ class Test_Exceptions(BaseTestCase):
             counter += 1
             with self.subTest(cls_name=cls_name):
 
-
                 arg_string = "Arg string goes second."
-                default = exceptions.EXC_STRINGS.get(cls._strcode, "")
+                default = self.get_default_string(cls, auto_format=True)
                 expected = " ".join([default, arg_string])
 
-                err = cls(arg_string)
+                err = self.instantiate_exception(cls, arg_string)
 
-                self.assertSubstringsInString([default, expected], str(err))
+                self.assertSubstringsInString([default, arg_string], str(err))
                 self.assertEqual(expected, str(err), msg=f"{repr(str(err))}")
 
         self.assertGreater(counter, 0, msg="No Exception classes tested!")
 
+    def get_default_string(self, exc_cls, auto_format=False):
+        key = exc_cls._strcode
+        string = exceptions.EXC_STRINGS.get(key, "")
+        if auto_format and "{detail}" in string:
+            string = string.format(detail=self.alternate_detail)
+        return string
 
+    def instantiate_exception(self, exc_cls, *args, detail=None):
+        try:
+            error = exc_cls(*args, detail=detail)
+        except ValueError as err:
+            errmsg = str(err)
+            tolerate_substring = ("default message requires a string for the "
+                                  "kwarg 'detail'")
+            # Handle
+            if tolerate_substring in errmsg and not detail:
+                try:
+                    error = exc_cls(*args, detail=self.alternate_detail)
+                except ValueError:
+                    raise
+                else:
+                    was_handled = True
+            else:
+                raise
+        else:
+            was_handled = False
 
-
+        if was_handled:
+            assertmsg = (f"This {error.__class__.__name__} exception has a "
+                         "default string that requires a 'detail' kwarg. This "
+                         "helper function wasn't provided a value for "
+                         "'detail' but it tried to rescue the instantiation "
+                         f"exception by providing '{self.alternate_detail}' "
+                         "and then assertion testing this substring was "
+                         "present in the returned error.")
+            self.assertIn(self.alternate_detail, str(error), msg=assertmsg)
+            return error
+        else:
+            return error
 
 
 if __name__ == '__main__':
