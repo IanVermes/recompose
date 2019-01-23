@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
-"""Unit test of main/core.py.
+"""Unit test of main/helpers/xml.py.
 
 Copyright: Ian Vermes 2019
 """
@@ -35,6 +35,7 @@ class Test_XMLAsInput_Class(InputFileTestCase):
             msg = (f"Could not setup test, directory '{cls.resource_dir}' was "
                     "not found.")
             raise ValueError(msg)
+        cls.package_exception = exceptions.RecomposeError
 
     def test_super_implementation(self):
         baseclass = xml._XMLAsInputBase
@@ -81,12 +82,34 @@ class Test_XMLAsInput_Class(InputFileTestCase):
     def test_isSuitable_fails_fatally(self):
         inputs = [self.bad_input, self.decoy_input]
         inputcheck = self.klass()
-        expected_exception = exceptions.RecomposeError
+        expected_exception = self.package_exception
 
         for input in inputs:
             with self.subTest(input=input):
                 with self.assertRaises(expected_exception):
                     inputcheck.isSuitable(input, fatal=True)
+
+    def test_isSuitable_raises_appropiate_exception(self):
+        inputcheck = self.klass()
+        input = self.bad_input
+        expected_exception = exceptions.InputFileError
+        expected_strings = ["Microsoft", "xml",
+                            os.path.basename(self.bad_input), "wrong", "file",
+                            "type"]
+
+        # Check right exception is raised
+        with self.assertRaises(expected_exception) as failure:
+            inputcheck.isSuitable(input, fatal=True)
+
+        # Check exception is of appropriate type
+        error = failure.exception
+        is_subclass = issubclass(type(error), self.package_exception)
+        self.assertTrue(is_subclass, msg=("Exception is "
+                        f"of an unexpected subtype: {type(error)}"))
+
+        # Check exception has the correct message for the user.
+        self.assertSubstringsInString(substrings=expected_strings,
+                                      string=str(error))
 
     def check_boolean_fileobject_method(self, func, bool2file_map):
         for expected, file_list in bool2file_map.items():
@@ -154,18 +177,15 @@ class Test_XMLAsInput_Class(InputFileTestCase):
     def test_battery_of_tests_method(self):
         instance = self.klass()
         method = instance._battery_test
-        good_file = "resources/test_resources/valid_namespace.xml"
+        good_file = self.good_input
         bad_files = [f for f in os.listdir(self.resource_dir)
                              if f.startswith("invalid")]
         bad_files = [os.path.join(self.resource_dir, f) for f in bad_files]
 
         files = {True: [good_file],
                  False: bad_files}
-        if not os.path.isfile(good_file):
-            raise ValueError(f"Could not find the good file '{good_file}'")
-        else:
-            self.check_boolean_fileobject_method(func=method,
-                                                 bool2file_map=files)
+        self.check_boolean_fileobject_method(func=method,
+                                             bool2file_map=files)
 
 
 if __name__ == '__main__':
