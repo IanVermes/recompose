@@ -28,7 +28,8 @@ class _XMLAsInputBase(object):
     """Base class for classes that interact with the XML input file.
     """
     def __init__(self):
-        self._foo = "bar"
+        self._has_tree = False
+
 
 class XMLAsInput(_XMLAsInputBase):
     """Check whether an input file is suitable.
@@ -39,7 +40,6 @@ class XMLAsInput(_XMLAsInputBase):
 
     def __init__(self):
         super().__init__()
-        self._foo = "bat"
 
     def _sniff(self, fileobject):
         try:

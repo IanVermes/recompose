@@ -7,11 +7,13 @@ Copyright: Ian Vermes 2019
 """
 from tests.base_testcases import BaseTestCase, InputFileTestCase
 from helpers import xml
-
 import exceptions
+
+from lxml import etree
 
 import unittest
 import os
+import types
 
 
 class Test_XMLBase_Class(BaseTestCase):
@@ -24,33 +26,121 @@ class Test_XMLBase_Class(BaseTestCase):
         self.klass()
 
 
-class Test_XMLAsInput_Class(InputFileTestCase):
+class Test_XMLAsInput_Workhorse(InputFileTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.klass = xml.XMLAsInput
+        cls.package_exception = exceptions.RecomposeError
+        cls.attr_not_ready_exception = Exception
+
+        cls._memo_inputs = {}
+
+        try:
+            input = cls.klass()
+            input.isSuitable(cls.good_input, fatal=True)
+        except Exception as err:
+            msg = "Can not run tests as .isSuitable fails!"
+            raise AssertionError(msg) from err
+        else:
+            cls.input = input
+
+        cls.attr_files = {cls.good_input: True, cls.decoy_input: True, cls.bad_input: False}
+
+    @unittest.expectedFailure
+    def test_attr_root(self):
+        attr = "root"
+        return_type = etree._Element
+
+        _result = self.multi_attr_test(attr, return_type)
+
+    @unittest.expectedFailure
+    def test_attr_tree(self):
+        attr = "tree"
+        return_type = etree._ElementTree
+
+        _result = self.multi_attr_test(attr, return_type)
+
+    @unittest.expectedFailure
+    def test_attr_xpaths(self):
+        attr = "tree"
+        return_type = xml.Xpaths
+
+        _result = self.multi_attr_test(attr, return_type)
+
+    @unittest.expectedFailure
+    def test_attr_nsmap(self):
+        attr = "nsmap"
+        return_type = dict
+
+        _result = self.multi_attr_test(attr, return_type)
+
+    @unittest.expectedFailure
+    def test_attr_paragraphs(self):
+        attr = "paragraphs"
+        return_type = types.GeneratorType
+
+        _result = self.multi_attr_test(attr, return_type)
+
+    def multi_attr_test(self, attr, return_type):
+        if not isinstance(return_type, type):
+            msg = f"Bad arg for this function {repr(return_type)}: not a class."
+            raise ValueError(msg)
+        # Test attr presence
+        self.assertHasAttr(self.input, attr)
+        # Test attr for instances evaluated with other files
+        # and exceptions raised when failure is encountered
+        for tup in self.attr_files.items():
+            with self.subTest(should_return=tup[1], file=tup[0]):
+                self._attr_test(tup, attr)
+        # Test the return type is correct
+        value = getattr(self.input, attr)
+        self.assertIsInstance(value, return_type)
+        return value
+
+
+    def _attr_test(self, file_and_boolean, attr):
+        filename, does_return = file_and_boolean
+        input = self._memo_inputs.get(filename)
+
+        # Memoize
+        if input is None:
+            input = self.klass()
+            input.isSuitable(filename, fatal=False)
+            self._memo_inputs[filename] = input
+
+        if does_return:
+            result = getattr(input, attr)
+            self.assertIsNotNone(result)
+            self.assertTrue(result)
+        else:
+            with self.assertRaises(RuntimeError) as fail:
+                result = getattr(input, attr)
+            self.assertIsInstance(fail.exception, RuntimeError)
+            self.assertIsInstance(fail.exception, self.attr_not_ready_exception)
+            errmsg = str(fail.exception)
+            method = self.isSuitable.__name__
+            substrings = (f"run object method {method} before "
+                          "calling attributes").split()
+            self.assertSubstringsInString(substrings, errmsg)
+
+
+
+class Test_XMLAsInput_Suitablilty(InputFileTestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.klass = xml.XMLAsInput
+        cls.package_exception = exceptions.RecomposeError
         cls.resource_dir = "resources/test_resources"
         if not os.path.isdir(cls.resource_dir):
             msg = (f"Could not setup test, directory '{cls.resource_dir}' was "
                     "not found.")
             raise ValueError(msg)
-        cls.package_exception = exceptions.RecomposeError
 
-    def test_super_implementation(self):
-        baseclass = xml._XMLAsInputBase
-        childclass = self.klass
-
-        base = baseclass()
-        child = childclass()
-
-        self.assertHasAttr(base, "_foo")
-        self.assertHasAttr(child, "_foo")
-
-        self.assertNotEqual(base._foo, child._foo)
 
     def test_instantiation(self):
-        input = self.good_input
 
         self.klass()
 
