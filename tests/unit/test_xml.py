@@ -112,7 +112,7 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
         if does_return:
             result = getattr(input, attr)
             self.assertIsNotNone(result)
-            self.assertTrue(result)
+            self.assertTrue(len(result))
         else:
             with self.assertRaises(RuntimeError) as fail:
                 result = getattr(input, attr)
