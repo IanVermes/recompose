@@ -36,10 +36,23 @@ class XMLAsInput(_XMLAsInputBase):
 
     Methods:
         isSuitable
+    Attr:
+        root
     """
 
     def __init__(self):
         super().__init__()
+        self.__suitable = False
+        self.__tree = None
+        self.__root = None
+
+    @property
+    def root(self):
+        if self.__suitable:
+            return self.__root
+        else:
+            method = self.isSuitable.__name__
+            raise exceptions.InputOperationError(detail=method)
 
     def _sniff(self, fileobject):
         try:
@@ -94,6 +107,12 @@ class XMLAsInput(_XMLAsInputBase):
             return boolean
         return boolean
 
+    def __setup(self, filename):
+        if not self.__suitable:
+            return
+        self.__tree = tree = etree.parse(filename)
+        self.__root = root = tree.getroot()
+
     def isSuitable(self, filename, fatal=None):
 
         with open(filename, "r") as handle:
@@ -103,4 +122,6 @@ class XMLAsInput(_XMLAsInputBase):
             detail = os.path.basename(filename)
             raise exceptions.InputFileError(detail=detail)
         else:
+            self.__suitable = suitable
+            self.__setup(filename)
             return suitable
