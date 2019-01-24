@@ -14,6 +14,7 @@ import exceptions
 from lxml import etree
 
 import os
+from collections import UserDict
 
 EXPECTED_PREFIXES = set(['xml', 'pkg', 'wps', 'wne', 'wpi', 'wpg', 'w15', 'w14',
                          'w', 'w10', 'wp', 'wp14', 'v', 'm', 'r', 'o', 'mv',
@@ -26,22 +27,26 @@ SAMPLE_URIS = {"pkg": "http://schemas.microsoft.com/office/2006/xmlPackage",
 FIND_NAMESPACES_GET_PREFIX_URI = etree.XPath("//namespace::*")
 
 
-class XPaths(dict):
+class XPaths(UserDict):
     """Dictionary that maps xpath queries to etree.XPath with shared namespaces.
 
     Arg:
         source(etree._ElementTree or str): Tree or XML filename.
     Class methods:
-        make_nsmap
+        make_nsmap: From a tree or filename, find namespaces and map prefixes
+                    to uris.
     Methods:
-        add_xpath
-        get
-        get_xpath
+        add_xpath: From a xpath query, compile a namespaced etree.XPath
+                   function and cache it for reuse.
+        get_xpath: For an xpath query, fetch a etree.XPath function from the
+                   cache or compiler. Memoizes the function if necessary.
+        get: Convenience method of get_xpath method.
     Attr:
-        nsmap
+        nsmap(dict): XML namespace prefix -> URI.
     """
 
     def __init__(self, source):
+        super().__init__()  # create UserDict.data and wrap around it.
         self.__tree = self.__get_tree(source)
         self.__notimplemented = ("This method is not accessible from class "
                                  "interface. Consider rewritting as wrapped "
@@ -60,12 +65,12 @@ class XPaths(dict):
             detail = f"Given reason: '{query}' -> {err_reason.lower()}."
             raise exceptions.XPathQueryError(detail=detail)
         else:
-            self[query] = xpath_func
+            self.data[query] = xpath_func
 
     def get_xpath(self, query):
         if query not in self:
             self.add_xpath(query)
-        return self[query]
+        return self.data[query]
 
     def get(self, query):
         return self.get_xpath(query)
