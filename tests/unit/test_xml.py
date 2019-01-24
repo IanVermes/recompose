@@ -203,7 +203,6 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
 
     def test_commit_foo(self):
         raise AssertionError("Commit history is borked...")
-        raise AssertionError("Made this change after 'commit from commandline'")
 
     @unittest.expectedFailure
     def test_attr_paragraphs(self):
