@@ -26,6 +26,139 @@ class Test_XMLBase_Class(BaseTestCase):
         self.klass()
 
 
+class Test_Xpaths_Class(InputFileTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.klass = xml.XPaths
+        cls.package_exception = exceptions.RecomposeError
+
+    def setUp(self):
+        self.instance = self.klass(self.good_input)
+
+    def test_attr_nsmap(self):
+        attr = "nsmap"
+
+        value = getattr(self.instance, attr)
+
+        self.assertIsInstance(value, dict)
+
+    def test_nsmap_generic_contents(self):
+        nsmap = self.instance.nsmap
+
+        self.assertNotIn(None, nsmap)
+
+        for prefix, uri in nsmap.items():
+            with self.subTest(prefix=prefix):
+                self.assertIsInstance(prefix, str)
+                self.assertNotIn(":", prefix)
+                self.assertNotIn(" ", prefix)
+                self.assertIsInstance(uri, str)
+
+    def test_nsmap_generic_prefixes(self):
+        prefixes = set(self.instance.nsmap)
+        expected = set(xml.EXPECTED_PREFIXES)
+
+        diff = prefixes.symmetric_difference(expected)
+
+        self.assertEqual(len(prefixes), len(expected))
+        self.assertEqual(len(diff), 2)
+        self.assertIn(None, diff)
+        self.assertIn("ns0", diff)
+
+    def test_nsmap_specific_prefix_uri_pairings(self):
+        nsmap = self.instance.nsmap
+        expected = xml.SAMPLE_URIS
+        for exp_pref, exp_uri in expected.items():
+            with self.subTest(prefix=exp_pref):
+                if exp_pref is None:
+                    exp_pref = "ns0"
+                res_uri = nsmap.get(exp_pref, "")
+
+                self.assertEqual(res_uri, exp_uri)
+
+    @unittest.expectedFailure
+    def test_method_get(self):
+        method = self.instance.get
+        # veneer method
+        self.test_method_get_xpath(method)
+
+    @unittest.expectedFailure
+    def test_method_get_xpath(self, method=None):
+        if method is None:
+            method = self.instance.get_xpath
+
+        query = "//*"
+        expected_type = etree.XPath
+        self.assertNotIn(query, self.instance)
+
+        xpath_obj = method(query)
+
+        self.assertIn(query, self.instance)
+        self.assertIsInstance(xpath_obj, expected_type)
+
+    @unittest.expectedFailure
+    def test_method_add_xpath(self):
+        query = "//*"
+        expected_type = type(None)
+        self.assertNotIn(query, self.instance)
+
+        result = self.instance.add_xpath(query)
+
+        self.assertIn(query, self.instance)
+        self.assertIsInstance(query, expected_type)
+
+    @unittest.expectedFailure
+    def test_method_add_xpath_illegal(self):
+        query = "//self()"
+        substrings = ["query", "xpath", query, "invalid", ]
+
+        with self.assertRaises(Exception) as failure:
+            self.instance.add_xpath(query)
+
+        self.assertIsInstance(failure.exception, exceptions.InvalidXpathQuery)
+        self.assertIsInstance(failure.exception, ValueError)
+        self.assertSubstringsInString(substrings, str(failure.exception))
+
+    def test_method_make_nsmap(self):
+        tree = etree.parse(self.good_input)
+        find_prefix_uri = etree.XPath("//namespace::*")
+        list_dicts = []
+
+        exp_nsmap1 = {k: v for k, v in find_prefix_uri(tree)}
+        res_nsmap1 = self.klass.make_nsmap(self.good_input)
+        list_dicts.append((exp_nsmap1, res_nsmap1))
+
+        exp_nsmap2 = {k if k is not None else "ns0": v for k, v in find_prefix_uri(tree)}
+        res_nsmap2 = self.klass.make_nsmap(self.good_input, replace=True)
+        list_dicts.append((exp_nsmap2, res_nsmap2))
+
+        exp_nsmap3 = {k if k is not None else "foo": v for k, v in find_prefix_uri(tree)}
+        res_nsmap3 = self.klass.make_nsmap(self.good_input, replace=True, repl="foo")
+        list_dicts.append((exp_nsmap3, res_nsmap3))
+
+        for i, tup in enumerate(list_dicts, start=1):
+            with self.subTest(test_number=i):
+                self.assertDictEqual(*tup)
+
+    def test_method_make_nsmap_with_clashing_prefix(self):
+        tree = etree.parse(self.good_input)
+        find_prefix_uri = etree.XPath("//namespace::*")
+        prefix = "w"
+        substrings = [prefix, "URI", "assign", "already", "repl",
+                      "kwarg", "different"]
+        expected_exception = exceptions.PrefixSubstitutionError
+
+        exp_nsmap = {k: v for k, v in find_prefix_uri(tree)}
+        self.assertIn(prefix, exp_nsmap)
+        with self.assertRaises(Exception) as failure:
+            self.klass.make_nsmap(self.good_input, replace=True, repl=prefix)
+
+        self.assertIsInstance(failure.exception, expected_exception)
+        self.assertIsInstance(failure.exception, ValueError)
+        self.assertSubstringsInString(substrings, str(failure.exception))
+
+
 class Test_XMLAsInput_Workhorse(InputFileTestCase):
     @classmethod
     def setUpClass(cls):
@@ -59,9 +192,8 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
 
         _result = self.multi_attr_test(attr, return_type)
 
-    @unittest.expectedFailure
     def test_attr_xpaths(self):
-        attr = "tree"
+        attr = "xpaths"
         return_type = xml.Xpaths
 
         _result = self.multi_attr_test(attr, return_type)
