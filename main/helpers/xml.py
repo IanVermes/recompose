@@ -23,6 +23,59 @@ SAMPLE_URIS = {"pkg": "http://schemas.microsoft.com/office/2006/xmlPackage",
                "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
                None: "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"}
 
+FIND_NAMESPACES_GET_PREFIX_URI = etree.XPath("//namespace::*")
+
+
+class XPaths(dict):
+    """Dictionary that maps xpath queries to etree.XPath with shared namespaces.
+
+    Arg:
+        source(etree._ElementTree or str): Tree or XML filename.
+    """
+
+    def __init__(self, source):
+        self.__tree = self.__get_tree(source)
+
+        self.nsmap = self.make_nsmap(self.__tree, replace=True)
+
+    @staticmethod
+    def __get_tree(source):
+        def tree2tree(source):
+            return source
+
+        def elem2tree(source):
+            return source.getroottree()
+
+        def string2tree(source):
+            return etree.parse(source)
+
+        types = {str: string2tree, etree._Element: elem2tree, etree._ElementTree: tree2tree}
+        tree_maker = types.get(type(source), None)
+        if tree_maker is None:
+            msg = ("Only use filename strings or etree._ElementTree "
+                   f"objects, got: {repr(type(source))}")
+            raise TypeError(msg)
+        else:
+            tree = tree_maker(source)
+            return tree
+
+    @classmethod
+    def make_nsmap(cls, source, replace=False, repl="ns0"):
+        tree = cls.__get_tree(source)
+        xpath_func = FIND_NAMESPACES_GET_PREFIX_URI
+        nsmap = {pre: uri for pre, uri in xpath_func(tree)}
+        if not replace:
+            return nsmap
+        else:
+            if None in nsmap and repl in nsmap:
+                raise exceptions.PrefixSubstitutionError(detail=repl)
+            elif None in nsmap:
+                nsmap[repl] = nsmap.pop(None)
+                return nsmap
+            else:
+                return nsmap
+
+
 
 class _XMLAsInputBase(object):
     """Base class for classes that interact with the XML input file.
@@ -54,6 +107,14 @@ class XMLAsInput(_XMLAsInputBase):
             method = self.isSuitable.__name__
             raise exceptions.InputOperationError(detail=method)
 
+    @property
+    def tree(self):
+        if self.__suitable:
+            return self.__tree
+        else:
+            method = self.isSuitable.__name__
+            raise exceptions.InputOperationError(detail=method)
+
     def _sniff(self, fileobject):
         try:
             fileobject.seek(0, 0)
@@ -80,12 +141,12 @@ class XMLAsInput(_XMLAsInputBase):
         return boolean
 
     def _namespace(self, fileobject):
-        query = "//namespace::*"
+        find_ns = FIND_NAMESPACES_GET_PREFIX_URI
 
         try:
             fileobject.seek(0, 0)
             tree = etree.parse(fileobject)
-            nsmap = {prefix: uri for prefix, uri in tree.xpath(query)}
+            nsmap = {prefix: uri for prefix, uri in find_ns(tree)}
             prefixes = set(nsmap)
             flag1 = prefixes == EXPECTED_PREFIXES
             flag2 = all([(nsmap.get(pre, "") == uri) for pre, uri in SAMPLE_URIS.items()])

@@ -53,10 +53,13 @@ class _CodedErrors(RecomposeError):
 
 class InputFileError(_CodedErrors):
     """For when the input file is not correct."""
-
     _strcode = "input_type"
 
 
 class InputOperationError(_CodedErrors, RuntimeError):
-
+    """Tried to use methods before calling the check method of the class."""
     _strcode = "input_check_skipped"
+
+class PrefixSubstitutionError(_CodedErrors, ValueError):
+    """Tried to replace None with an already assigned prefix."""
+    _strcode = "prefix_clash"
