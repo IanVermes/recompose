@@ -63,3 +63,6 @@ class InputOperationError(_CodedErrors, RuntimeError):
 class PrefixSubstitutionError(_CodedErrors, ValueError):
     """Tried to replace None with an already assigned prefix."""
     _strcode = "prefix_clash"
+
+class XPathQueryError(_CodedErrors, ValueError):
+    _strcode = "xpath_invalid_syntax"

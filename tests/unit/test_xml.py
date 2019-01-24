@@ -77,13 +77,11 @@ class Test_Xpaths_Class(InputFileTestCase):
 
                 self.assertEqual(res_uri, exp_uri)
 
-    @unittest.expectedFailure
     def test_method_get(self):
         method = self.instance.get
         # veneer method
         self.test_method_get_xpath(method)
 
-    @unittest.expectedFailure
     def test_method_get_xpath(self, method=None):
         if method is None:
             method = self.instance.get_xpath
@@ -97,7 +95,6 @@ class Test_Xpaths_Class(InputFileTestCase):
         self.assertIn(query, self.instance)
         self.assertIsInstance(xpath_obj, expected_type)
 
-    @unittest.expectedFailure
     def test_method_add_xpath(self):
         query = "//*"
         expected_type = type(None)
@@ -106,17 +103,16 @@ class Test_Xpaths_Class(InputFileTestCase):
         result = self.instance.add_xpath(query)
 
         self.assertIn(query, self.instance)
-        self.assertIsInstance(query, expected_type)
+        self.assertIsInstance(result, expected_type)
 
-    @unittest.expectedFailure
     def test_method_add_xpath_illegal(self):
         query = "//self()"
-        substrings = ["query", "xpath", query, "invalid", ]
+        substrings = ["query", "XPath", query, "invalid", "reason"]
 
         with self.assertRaises(Exception) as failure:
             self.instance.add_xpath(query)
 
-        self.assertIsInstance(failure.exception, exceptions.InvalidXpathQuery)
+        self.assertIsInstance(failure.exception, exceptions.XPathQueryError)
         self.assertIsInstance(failure.exception, ValueError)
         self.assertSubstringsInString(substrings, str(failure.exception))
 

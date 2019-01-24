@@ -31,12 +31,44 @@ class XPaths(dict):
 
     Arg:
         source(etree._ElementTree or str): Tree or XML filename.
+    Class methods:
+        make_nsmap
+    Methods:
+        add_xpath
+        get
+        get_xpath
+    Attr:
+        nsmap
     """
 
     def __init__(self, source):
         self.__tree = self.__get_tree(source)
-
+        self.__notimplemented = ("This method is not accessible from class "
+                                 "interface. Consider rewritting as wrapped "
+                                 "class?.")
         self.nsmap = self.make_nsmap(self.__tree, replace=True)
+
+    def add_xpath(self, query):
+        try:
+            xpath_func = etree.XPath(query, namespaces=self.nsmap)
+        except etree.XPathSyntaxError as err:
+            err_reason = err.args[0]
+        else:
+            err_reason = ""
+
+        if err_reason:
+            detail = f"Given reason: '{query}' -> {err_reason.lower()}."
+            raise exceptions.XPathQueryError(detail=detail)
+        else:
+            self[query] = xpath_func
+
+    def get_xpath(self, query):
+        if query not in self:
+            self.add_xpath(query)
+        return self[query]
+
+    def get(self, query):
+        return self.get_xpath(query)
 
     @staticmethod
     def __get_tree(source):
@@ -74,6 +106,12 @@ class XPaths(dict):
                 return nsmap
             else:
                 return nsmap
+
+    def setdefault(self, *args, **kwargs):
+        raise NotImplementedError(self.__notimplemented)
+
+    def update(self, *args, **kwargs):
+        raise NotImplementedError(self.__notimplemented)
 
 
 
