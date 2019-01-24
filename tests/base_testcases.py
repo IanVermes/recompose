@@ -111,6 +111,28 @@ class InputFileTestCase(BaseTestCase):
         if not all(os.path.isfile(f) for f in files):
             raise FileNotFoundError("Missing file(s)!")
 
+    @staticmethod
+    def get_prefixed_name(element, namespaces):
+        """Helper: get the name of the element as it appears in the XML"""
+        name = element.tag
+        for prefix, uri in namespaces.items():
+            formatted_uri = "{%s}" % uri
+            if formatted_uri in name:
+                formatted_prefix = f"{prefix}:"
+                name = name.replace(formatted_uri, formatted_prefix)
+                break
+        return name
+
+    @staticmethod
+    def get_element_depth(element):
+        """Helper: get the absolute depth of an element."""
+        depth = 0
+        while element is not None:
+            depth += 1
+            element = element.getparent()
+        return depth
+
+
 
 class CommandLineTestCase(BaseTestCase):
 

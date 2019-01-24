@@ -5,11 +5,14 @@
 
 Copyright: Ian Vermes 2019
 """
-from tests.base_testcases import BaseTestCase, CommandLineTestCase
+from tests.base_testcases import BaseTestCase, CommandLineTestCase, InputFileTestCase
+
+from lxml import etree
 
 import tempfile
 import unittest
 import os
+
 
 class Test_BaseTestCase_AssertMethods_HasAttr(BaseTestCase):
 
@@ -181,6 +184,35 @@ class Test_BaseTestCase_AssertMethods_Files(BaseTestCase):
         with self.assertRaises(AssertionError):
             self.assertFileNotInDirectory(file=filename, directory=dirname)
 
+
+class Test_InputFileTestCase_Helper_Method(InputFileTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.nsmap = {"g": "www.google.com", "w": "www.w3c.org"}
+        xml_string = ("<g:doc  xmlns:g='www.google.com' xmlns:w='www.w3c.org'>"
+                      "<g:a><w:b/><w:b/></g:a>"
+                      "</g:doc>")
+        cls.root = etree.fromstring(xml_string)
+        cls.root = cls.root.getroottree()
+
+    def test_get_prefixed_name(self):
+        query = "//w:b[1]"
+        element = self.root.xpath(query, namespaces=self.nsmap)[0]
+        expected = "w:b"
+
+        res = InputFileTestCase.get_prefixed_name(element, namespaces=self.nsmap)
+
+        self.assertEqual(res, expected)
+
+    def test_get_element_depth(self):
+        query = "//w:b[1]"
+        element = self.root.xpath(query, namespaces=self.nsmap)[0]
+        depth = 3
+
+        res = InputFileTestCase.get_element_depth(element)
+
+        self.assertEqual(res, depth)
 
 
 class Test_CommandLineTestCase_Itself(CommandLineTestCase):
