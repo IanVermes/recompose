@@ -205,6 +205,15 @@ class Test_InputFileTestCase_Helper_Method(InputFileTestCase):
 
         self.assertEqual(res, expected)
 
+    def test_get_prefixed_name_no_namespace_kwarg(self):
+        query = "//w:b[1]"
+        element = self.root.xpath(query, namespaces=self.nsmap)[0]
+        expected = "w:b"
+
+        res = InputFileTestCase.get_prefixed_name(element)
+
+        self.assertEqual(res, expected)
+
     def test_get_element_depth(self):
         query = "//w:b[1]"
         element = self.root.xpath(query, namespaces=self.nsmap)[0]

@@ -112,12 +112,22 @@ class InputFileTestCase(BaseTestCase):
             raise FileNotFoundError("Missing file(s)!")
 
     @staticmethod
-    def get_prefixed_name(element, namespaces):
+    def get_prefixed_name(element, namespaces=None):
         """Helper: get the name of the element as it appears in the XML"""
+        if namespaces is None:
+            try:
+                namespaces = element.nsmap
+            except AttributeError:
+                tree = element.getroottree()
+                namespaces = dict(set(tree.xpath("//namespace::*")))
         name = element.tag
         for prefix, uri in namespaces.items():
             formatted_uri = "{%s}" % uri
             if formatted_uri in name:
+                if prefix is None:
+                    msg = ("URI of element was found in namespace but prefix "
+                           "is None!")
+                    raise TypeError(msg)
                 formatted_prefix = f"{prefix}:"
                 name = name.replace(formatted_uri, formatted_prefix)
                 break
