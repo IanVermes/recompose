@@ -26,7 +26,7 @@ class Test_XMLBase_Class(BaseTestCase):
         self.klass()
 
 
-class Test_Xpaths_Class(InputFileTestCase):
+class Test_XPaths_Class(InputFileTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -190,11 +190,10 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
 
     def test_attr_xpaths(self):
         attr = "xpaths"
-        return_type = xml.Xpaths
+        return_type = xml.XPaths
 
         _result = self.multi_attr_test(attr, return_type)
 
-    @unittest.expectedFailure
     def test_attr_nsmap(self):
         attr = "nsmap"
         return_type = dict
@@ -204,9 +203,28 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
     @unittest.expectedFailure
     def test_attr_paragraphs(self):
         attr = "paragraphs"
-        return_type = types.GeneratorType
+        return_container_type = types.GeneratorType
+        content_type = etree._Element
 
-        _result = self.multi_attr_test(attr, return_type)
+        # Test 1
+        container = self.multi_attr_test(attr, return_container_type)
+        container = list(container)
+
+        # Test 2 - go over contents genericly
+        types_in_container = {type(item) for item in container}
+        self.assertIn(content_type, types_in_container)
+        self.assertEqual(len(types_in_container), 1)
+
+        # Test 3 - confirm suitability of method by confirming result homogeny
+        depths, names = [], []
+        expect_name = "w:r"
+        for item in container:
+            names.append(self.get_prefixed_name(item))
+            depths.append(self.get_element_depth(item))
+        depths, names = set(depths), set(names)
+        self.assertEqual(len(names), 1)
+        self.assertEqual(len(depths), 1)
+        self.assertIn(expect_name, names, msg=repr(names))
 
     def multi_attr_test(self, attr, return_type):
         if not isinstance(return_type, type):
