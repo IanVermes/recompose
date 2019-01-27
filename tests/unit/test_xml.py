@@ -15,6 +15,26 @@ import unittest
 import os
 import types
 
+import unittest
+import sys
+import pdb
+import functools
+import traceback
+def debug_on(*exceptions):
+    """DEBUG idea from https://stackoverflow.com/q/4398967/"""
+    if not exceptions:
+        exceptions = (AssertionError, )
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except exceptions:
+                info = sys.exc_info()
+                traceback.print_exception(*info)
+                pdb.post_mortem(info[2])
+        return wrapper
+    return decorator
 
 class Test_XMLBase_Class(BaseTestCase):
 
@@ -200,14 +220,14 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
 
         _result = self.multi_attr_test(attr, return_type)
 
-    @unittest.expectedFailure
-    def test_attr_paragraphs(self):
-        attr = "paragraphs"
-        return_container_type = types.GeneratorType
+    def test_method_paragraphs(self):
+        attr = "iter_paragraphs"
+        container_type = types.GeneratorType
         content_type = etree._Element
 
         # Test 1
-        container = self.multi_attr_test(attr, return_container_type)
+        container = self.input.iter_paragraphs()
+        self.assertIsInstance(container, container_type)
         container = list(container)
 
         # Test 2 - go over contents genericly
@@ -217,7 +237,7 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
 
         # Test 3 - confirm suitability of method by confirming result homogeny
         depths, names = [], []
-        expect_name = "w:r"
+        expect_name = "w:p"
         for item in container:
             names.append(self.get_prefixed_name(item))
             depths.append(self.get_element_depth(item))
@@ -242,7 +262,6 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
         self.assertIsInstance(value, return_type)
         return value
 
-
     def _attr_test(self, file_and_boolean, attr):
         filename, does_return = file_and_boolean
         input = self._memo_inputs.get(filename)
@@ -257,7 +276,9 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
             result = getattr(input, attr)
             self.assertIsNotNone(result)
             try:
-                self.assertTrue(len(result))
+                errmsg = (f"result type: {type(result)} -- is length an "
+                          "appropriate test?")
+                self.assertTrue(len(result), msg=errmsg)
             except TypeError:
                 self.assertTrue(result)
         else:
@@ -271,7 +292,6 @@ class Test_XMLAsInput_Workhorse(InputFileTestCase):
             substrings = (f"call object method {method} necessary "
                           "attributes").split()
             self.assertSubstringsInString(substrings, errmsg)
-
 
 
 class Test_XMLAsInput_Suitablilty(InputFileTestCase):

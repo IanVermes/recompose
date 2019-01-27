@@ -132,8 +132,12 @@ class XMLAsInput(_XMLAsInputBase):
 
     Methods:
         isSuitable
+        iter_paragraphs
     Attr:
         root
+        tree
+        nsmap
+        xpaths
     """
 
     def __init__(self):
@@ -141,6 +145,9 @@ class XMLAsInput(_XMLAsInputBase):
         self.__suitable = False
         self.__tree = None
         self.__root = None
+        self.__xpaths = None
+        self._find_paras_query = "//w:p"
+        self._find_suitable_paras_query = "//w:p[(count(descendant::w:i) > 0) and (count(descendant::w:t) > 0)]"
 
     @property
     def root(self):
@@ -157,6 +164,32 @@ class XMLAsInput(_XMLAsInputBase):
         else:
             method = self.isSuitable.__name__
             raise exceptions.InputOperationError(detail=method)
+
+    @property
+    def nsmap(self):
+        if self.__suitable:
+            return self.__xpaths.nsmap
+        else:
+            method = self.isSuitable.__name__
+            raise exceptions.InputOperationError(detail=method)
+
+    @property
+    def xpaths(self):
+        if self.__suitable:
+            return self.__xpaths
+        else:
+            method = self.isSuitable.__name__
+            raise exceptions.InputOperationError(detail=method)
+
+    def iter_paragraphs(self, force_all=False):
+        if force_all:
+            query = self._find_paras_query
+        else:
+            query = self._find_suitable_paras_query
+        find_paras = self.xpaths.get(query)
+        for para in find_paras(self.tree):
+            yield para
+
 
     def _sniff(self, fileobject):
         try:
@@ -215,7 +248,10 @@ class XMLAsInput(_XMLAsInputBase):
         if not self.__suitable:
             return
         self.__tree = tree = etree.parse(filename)
-        self.__root = root = tree.getroot()
+        self.__root = tree.getroot()
+        self.__xpaths = xpaths = XPaths(tree)
+        xpaths.add_xpath(query=self._find_paras_query)
+        xpaths.add_xpath(query=self._find_suitable_paras_query)
 
     def isSuitable(self, filename, fatal=None):
 
