@@ -33,7 +33,7 @@ class Test_Paragraph_Selection(InputFileTestCase):
 
         with open(comparison_text_filename) as handle:
             lines = [line.strip("\n") for line in handle]
-            no_empty = [l for l in lines if not (l and l.isspace())]
+            no_empty = [l for l in lines if (l and not l.isspace())]
         cls.txt_lines = lines
         cls.txt_lines_no_empty = no_empty
 
@@ -59,23 +59,24 @@ class Test_Paragraph_Selection(InputFileTestCase):
 
         # User gets a reasonable number of paras
         lowerbound, upperbound = len(self.txt_lines_no_empty), len(wrong_paras)
-        self.assertTrue(lowerbound <= len(paras) < upperbound)
+        self.assertTrue(lowerbound <= len(paras) < upperbound,
+                        msg=f"{lowerbound} <= {len(paras)} < {upperbound}")
 
         # Check paras have italic and text get_args
-        has_text = etree.XPath("descendant::w/t", namespaces=input.nsmap)
-        has_italic = etree.XPath("descendant::w/i", namespaces=input.nsmap)
+        has_text = etree.XPath("descendant::w:t", namespaces=input.nsmap)
+        has_italic = etree.XPath("descendant::w:i", namespaces=input.nsmap)
         get_string = etree.XPath("string()")
 
         for i, para in enumerate(paras):
             with self.subTest(paras_index=i):
-                self.assertTrue(has_text(para))  # text tags
-                self.assertTrue(has_italic(para))  # italic tags
+                self.assertTrue(len(has_text(para)))
+                self.assertTrue(len(has_italic(para)))
             with self.subTest(paras_index=i):
                 # paras are 'line for line'
                 xml_string = get_string(para)
                 txt_file_string = self.txt_lines_no_empty[i]
                 ratio = self.is_similar(xml_string, txt_file_string)
-                self.assertGreater(ratio, 0.75)
+                self.assertGreater(ratio, 0.95)
 
 
 
