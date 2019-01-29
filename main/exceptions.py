@@ -14,6 +14,7 @@ __CONFIG = configparser.ConfigParser()
 __CONFIG.read(__CONFIG_FILE)
 EXC_STRINGS = __CONFIG.defaults()
 
+
 class RecomposeError(Exception):
     """Base exception for this package."""
 
@@ -60,9 +61,11 @@ class InputOperationError(_CodedErrors, RuntimeError):
     """Tried to use methods before calling the check method of the class."""
     _strcode = "input_check_skipped"
 
+
 class PrefixSubstitutionError(_CodedErrors, ValueError):
     """Tried to replace None with an already assigned prefix."""
     _strcode = "prefix_clash"
+
 
 class XPathQueryError(_CodedErrors, ValueError):
     _strcode = "xpath_invalid_syntax"
