@@ -2,8 +2,7 @@
 # -*- coding: utf8 -*-
 """Various XML classes for Recompose.
 
-_XMLAsInputBase - base class
-
+XPaths - class that maps namespaced xpath queries to functions
 XMLAsInput - class for verifying suitablity of an XML file for Recompose
 
 Copyright: Ian Vermes 2019
@@ -119,15 +118,7 @@ class XPaths(UserDict):
         raise NotImplementedError(self.__notimplemented)
 
 
-
-class _XMLAsInputBase(object):
-    """Base class for classes that interact with the XML input file.
-    """
-    def __init__(self):
-        self._has_tree = False
-
-
-class XMLAsInput(_XMLAsInputBase):
+class XMLAsInput(object):
     """Check whether an input file is suitable.
 
     Methods:
@@ -138,6 +129,7 @@ class XMLAsInput(_XMLAsInputBase):
         tree
         nsmap
         xpaths
+
     """
 
     def __init__(self):

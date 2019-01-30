@@ -15,36 +15,6 @@ import unittest
 import os
 import types
 
-import unittest
-import sys
-import pdb
-import functools
-import traceback
-def debug_on(*exceptions):
-    """DEBUG idea from https://stackoverflow.com/q/4398967/"""
-    if not exceptions:
-        exceptions = (AssertionError, )
-    def decorator(f):
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            try:
-                return f(*args, **kwargs)
-            except exceptions:
-                info = sys.exc_info()
-                traceback.print_exception(*info)
-                pdb.post_mortem(info[2])
-        return wrapper
-    return decorator
-
-class Test_XMLBase_Class(BaseTestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.klass = xml._XMLAsInputBase
-
-    def test_instantiation(self):
-        self.klass()
-
 
 class Test_XPaths_Class(InputFileTestCase):
     @classmethod
