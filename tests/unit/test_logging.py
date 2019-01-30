@@ -4,15 +4,17 @@
 
 Copyright: Ian Vermes 2019
 """
-from tests.base_testcases import BaseTestCase
+from tests.base_testcases import LoggingTestCase
 
 import helpers.logging
+import exceptions
 
 import testfixtures
 
 import os
 import configparser
 import unittest
+import tempfile
 
 
 def tearDownModule():
@@ -20,21 +22,11 @@ def tearDownModule():
     for file in os.listdir(logdir):
         os.remove(os.path.join(logdir, file))
 
-class Test_Logging_Setup(BaseTestCase):
+class Test_Logging_Setup(LoggingTestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.config_file = getattr(helpers.logging, "__CONFIG_FILE")
-
-    def setUp(self):
-        import logging
-        import logging.config
-        self.logging_builtin = logging
-        self.logging_builtin_config = logging.config
-
-    def tearDown(self):
-        self.logging_builtin.shutdown()
-
 
     def test_has_config_file(self):
         config = self.config_file
@@ -114,21 +106,148 @@ class Test_Logging_Setup(BaseTestCase):
                                            "would reside in."))
 
 
-class Test_Logging_Runtime_Behaviour(BaseTestCase):
+class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        config_file = getattr(helpers.logging, "__CONFIG_FILE")
+        cls.config = config = configparser.ConfigParser()
+        cls.config.read(config_file)
+        cls.config_default_log = config.get(config.default_section,
+                                            "logfilename")
+        cls.module_default_log = getattr(helpers.logging,
+                                         "__DEFAULT_LOGFILENAME")
+
+    def setUp(self):
+        super().setUp()
+        self.remove_these = []
+
+    def tearDown(self):
+        super().tearDown()
+
+        for file in self.remove_these:
+            if os.path.exists(file):
+                os.remove(file)
+
+    def precondition(self, other_file=None):
+        self.assertFalse(os.path.exists(self.config_default_log))
+        self.assertFalse(os.path.exists(self.module_default_log))
+        if other_file is not None:
+            self.assertFalse(os.path.exists(other_file))
+
+    def test_setup_function_overloads_config_logfilename_DEFAULT(self):
+        self.precondition()
+        expected = self.module_default_log
+        self.remove_these.append(expected)
+
+        with testfixtures.OutputCapture() as _:
+            helpers.logging.setup_logging()
+            helpers.logging.finish_logging()
+
+        self.assertFalse(os.path.exists(self.config_default_log))
+        self.assertTrue(os.path.exists(expected))
+
+    def test_setup_function_overloads_config_logfilename_USERCHOICE(self):
+
+        with tempfile.TemporaryDirectory() as dirname:
+            user_defined_logfilename = os.path.join(dirname, "foobar.log")
+            self.precondition(other_file=user_defined_logfilename)
+
+            with testfixtures.OutputCapture() as _:
+                helpers.logging.setup_logging(user_defined_logfilename)
+                helpers.logging.finish_logging()
+
+            self.assertFalse(os.path.exists(self.config_default_log))
+            self.assertFalse(os.path.exists(self.module_default_log))
+            self.assertTrue(os.path.exists(user_defined_logfilename))
+
+    def test_setup_function_raises_package_error_with_bad_config(self):
+        self.precondition()
+        expected_exception = exceptions.LoggingSetupError
+        expected_substrings = ["Could", "not", "setup", "logging"]
+
+        dirname = tempfile.TemporaryDirectory()
+        dirname.cleanup()  # Explictly closed to provide a non-existant dir
+        bad_logfilename = os.path.join(dirname.name, "foo.log")
+        self.assertFalse(os.path.exists(os.path.dirname(bad_logfilename)))
+
+        with self.assertRaises(expected_exception) as fail:
+            helpers.logging.setup_logging(bad_logfilename)
+        helpers.logging.finish_logging()
+        self.assertSubstringsInString(expected_substrings, str(fail.exception))
+
+    def test_decorator_raises_exceptions(self):
+        decorator = helpers.logging.log_and_reraise
+        expected_exception = ValueError
+
+        @decorator()
+        def example_func():
+            raise expected_exception("generic message")
+
+        with self.assertRaises(expected_exception):
+            with self.assertLogs():
+                example_func()
+
+    def test_decorator_logs_package_exceptions_as_errors(self):
+        decorator = helpers.logging.log_and_reraise
+        expected_exception = exceptions.RecomposeError
+        logger = self.logging_builtin.getLogger("exampleLogger")
+
+        @decorator(logger)
+        def example_func():
+            raise expected_exception("generic error message")
+
+        self.check_decorator(func=example_func,
+                             level="ERROR",
+                             exception_type=expected_exception)
+
+    def test_decorator_logs_package_warnings_as_warnings(self):
+        decorator = helpers.logging.log_and_reraise
+        expected_exception = exceptions.RecomposeWarning
+        logger = self.logging_builtin.getLogger("exampleLogger")
+
+        @decorator(logger)
+        def example_func():
+            raise expected_exception("generic warning message")
+
+        self.check_decorator(func=example_func,
+                             level="WARNING",
+                             exception_type=expected_exception)
+
+    def test_decorator_logs_nonpackage_exceptions_as_critical(self):
+        decorator = helpers.logging.log_and_reraise
+        expected_exception = ValueError
+        logger = self.logging_builtin.getLogger("exampleLogger")
+
+        @decorator(logger)
+        def example_func():
+            raise expected_exception("ValueError message")
+
+        self.check_decorator(func=example_func,
+                             level="CRITICAL",
+                             exception_type=expected_exception)
+
+    def check_decorator(self, func=None, level=None, exception_type=None):
+        with self.assertRaises(exception_type):
+            with self.assertLogs() as captured:
+                func()
+        self.assertEqual(len(captured.records), 1)
+        log_event = captured.records[0]
+        self.assertEqual(log_event.levelname, level)
+
+
+class Test_Logging_Runtime_Behaviour(LoggingTestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.config_file = getattr(helpers.logging, "__CONFIG_FILE")
 
     def setUp(self):
-        import logging
-        import logging.config
-        self.logging_builtin = logging
-        self.logging_builtin_config = logging.config
+        super().setUp()
         self.remove_these = []
 
     def tearDown(self):
-        self.logging_builtin.shutdown()
+        super().tearDown()
         for file in self.remove_these:
             if os.path.exists(file):
                 os.remove(file)

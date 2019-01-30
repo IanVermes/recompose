@@ -30,7 +30,6 @@ class BaseTestCase(unittest.TestCase):
             raise AssertionError(errmsg)
 
 
-
     def assertSubstringsInString(self, substrings, string, msg=None):
         # Precondition
         if isinstance(substrings, str):
@@ -97,6 +96,20 @@ class BaseTestCase(unittest.TestCase):
         else:
             assertion_func(file_basename, files)
 
+
+class LoggingTestCase(BaseTestCase):
+        # cls.config_file = getattr(helpers.logging, "__CONFIG_FILE")
+
+    def setUp(self):
+        import logging
+        import logging.config
+        self.logging_builtin = logging
+        self.logging_builtin_config = logging.config
+
+    def tearDown(self):
+        self.logging_builtin.shutdown()
+
+
 class InputFileTestCase(BaseTestCase):
     """setUpClass assigns frequently used inputs to instance attributes."""
 
@@ -141,7 +154,6 @@ class InputFileTestCase(BaseTestCase):
             depth += 1
             element = element.getparent()
         return depth
-
 
 
 class CommandLineTestCase(BaseTestCase):

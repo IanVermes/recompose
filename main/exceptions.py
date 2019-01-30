@@ -19,8 +19,11 @@ class RecomposeError(Exception):
     """Base exception for this package."""
 
 
-class _CodedErrors(RecomposeError):
-    _strcode = None
+class RecomposeWarning(Warning):
+    """Base warning for this package."""
+
+
+class __Coded():
 
     def __init__(self, *args, detail=None):
         if not self._strcode:
@@ -52,6 +55,14 @@ class _CodedErrors(RecomposeError):
         super().__init__(*args)
 
 
+class _CodedErrors(__Coded, RecomposeError):
+    _strcode = None
+
+
+class _CodedWarning(__Coded, RecomposeWarning):
+    _strcode = None
+
+
 class InputFileError(_CodedErrors):
     """For when the input file is not correct."""
     _strcode = "input_type"
@@ -68,4 +79,14 @@ class PrefixSubstitutionError(_CodedErrors, ValueError):
 
 
 class XPathQueryError(_CodedErrors, ValueError):
+    """The XPath query is incorrectly formed."""
     _strcode = "xpath_invalid_syntax"
+
+
+class LoggingSetupError(_CodedErrors):
+    """Logging could not be customised: config, parse or file error."""
+    _strcode = "logging_setup"
+
+
+class ExampleWarning(_CodedWarning):
+    _strcode = "example_warn"
