@@ -158,6 +158,19 @@ class InputFileTestCase(BaseTestCase):
         return depth
 
 
+class ParagraphsTestCase(InputFileTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from helpers import xml
+        cls.input = xml.XMLAsInput()
+        cls.input.isSuitable(cls.good_input)
+        cls.text_filename = "resources/BR Autumn 2018 UTF8.txt"
+        if not os.path.isfile(cls.text_filename):
+            raise FileNotFoundError(cls.text_filename)
+
+
 class CommandLineTestCase(BaseTestCase):
 
     def invoke_cmd_via_commandline(self, cmd, expected_status):

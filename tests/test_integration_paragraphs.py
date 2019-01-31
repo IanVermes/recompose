@@ -8,6 +8,7 @@ Copyright: Ian Vermes 2019
 
 from tests.base_testcases import InputFileTestCase
 from helpers import xml
+from helpers import paragraphs
 
 from lxml import etree
 
@@ -78,6 +79,39 @@ class Test_Paragraph_Selection(InputFileTestCase):
                 ratio = self.is_similar(xml_string, txt_file_string)
                 self.assertGreater(ratio, 0.95)
 
+    def test_user_generates_preprocessed_paragraphs_with_input(self):
+        input = self.input
+
+        # User gets paragraphs, appropriate by default and not all.
+        iter_paras = input.iter_paragraphs()
+        for i, (para, text) in enumerate(zip(iter_paras, self.txt_lines)):
+
+            # User creates PreProcessed objects
+            prepara = paragraphs.PreProcessed(para)
+
+            # User is confident Prepara is similar in content to para
+            with self.subTest(para_index=i):
+                para_string = str(prepara)
+                percent = int(self.is_similar(para_string, text) * 100)
+                self.assertGreaterEqual(percent, 99)
+
+    def test_user_preprocessed_paragraphs_attributes_correspond_to_docx(self):
+        input = self.input
+
+        # User gets paragraphs: only consider first
+        iter_paras = input.iter_paragraphs()
+        first_para = next(iter_paras)
+
+        # User gets preprocessed para
+        prepara = paragraphs.PreProcessed(first_para)
+
+        # User interacts with attributes
+        docx_preitalic = "Adelman, Rachel E., "
+        self.assertEqual(prepara.pre, docx_preitalic)
+        docx_italic = "The Female Ruse: Women's Deception and Divine Sanction in the Hebrew Bible. "
+        self.assertEqual(prepara.italic, docx_italic)
+        docx_postitalic = "Sheffield Phoenix Press, Sheffield, 2017. xv, 256 pp. £60.00. ISBN 978 1 91092 825 7."
+        self.assertEqual(prepara.post, docx_postitalic)
 
 
 if __name__ == '__main__':
