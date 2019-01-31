@@ -92,5 +92,9 @@ class LoggingSetupError(_CodedErrors):
     _strcode = "logging_setup"
 
 
+class PreProcessedValueError(_CodedErrors, ValueError):
+    """If the class is initialised with the wrong element."""
+    _strcode = "preprocessed_init"
+
 class ExampleWarning(_CodedWarning):
     _strcode = "example_warn"
