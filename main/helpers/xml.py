@@ -24,6 +24,7 @@ SAMPLE_URIS = {"pkg": "http://schemas.microsoft.com/office/2006/xmlPackage",
                None: "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"}
 
 FIND_NAMESPACES_GET_PREFIX_URI = etree.XPath("//namespace::*")
+QUERY_TRACKCHANGES_BY_PREDICATE = "//w:p//*[w:ins or w:del or @w:author]"
 
 
 class XPaths(UserDict):
@@ -135,6 +136,7 @@ class XMLAsInput(object):
     def __init__(self):
         super().__init__()
         self.__suitable = False
+        self.__has_trackchanges = False
         self.__tree = None
         self.__root = None
         self.__xpaths = None
@@ -182,7 +184,6 @@ class XMLAsInput(object):
         for para in find_paras(self.tree):
             yield para
 
-
     def _sniff(self, fileobject):
         try:
             fileobject.seek(0, 0)
@@ -208,9 +209,23 @@ class XMLAsInput(object):
             fileobject.seek(0, 0)
         return boolean
 
+    def _trackchanges(self, fileobject):
+        find_ns = FIND_NAMESPACES_GET_PREFIX_URI
+        query_trackchanges = QUERY_TRACKCHANGES_BY_PREDICATE
+        self.__has_trackchanges = False
+        try:
+            fileobject.seek(0, 0)
+            tree = etree.parse(fileobject)
+            nsmap = {p if p is not None else "ns0": uri for p, uri in find_ns(tree)}
+            elements = tree.xpath(query_trackchanges, namespaces=nsmap)
+            boolean = bool(len(elements) == 0)  # No elements expected
+        finally:
+            fileobject.seek(0, 0)
+        self.__has_trackchanges = bool(len(elements))  # TC == has elements
+        return boolean
+
     def _namespace(self, fileobject):
         find_ns = FIND_NAMESPACES_GET_PREFIX_URI
-
         try:
             fileobject.seek(0, 0)
             tree = etree.parse(fileobject)
@@ -221,19 +236,16 @@ class XMLAsInput(object):
             boolean = flag1 and flag2
         finally:
             fileobject.seek(0, 0)
-
         return boolean
 
     def _battery_test(self, fileobject):
         boolean = self._sniff(fileobject)
         if boolean:
             boolean = self._parse(fileobject)
-        else:
-            return boolean
+        if boolean:
+            boolean = self._trackchanges(fileobject)
         if boolean:
             boolean = self._namespace(fileobject)
-        else:
-            return boolean
         return boolean
 
     def __setup(self, filename):
@@ -250,9 +262,14 @@ class XMLAsInput(object):
         with open(filename, "r") as handle:
             suitable = self._battery_test(handle)
 
+        has_trackchanges = self.__has_trackchanges
+
         if fatal and not suitable:
             detail = os.path.basename(filename)
-            raise exceptions.InputFileError(detail=detail)
+            if has_trackchanges:
+                raise exceptions.InputFileTrackChangesError(detail=detail)
+            else:
+                raise exceptions.InputFileError(detail=detail)
         else:
             self.__suitable = suitable
             self.__setup(filename)

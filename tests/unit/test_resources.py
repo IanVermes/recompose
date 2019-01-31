@@ -27,7 +27,9 @@ class TestResourcesPresent(BaseTestCase):
                      "BR Autumn 2018.docx",
                      "jjs_schema_1.1.xsd",
                      "invlaid_input.xml",
-                     "BR Autumn 2018.xml"}
+                     "BR Autumn 2018.xml",
+                     "BR Spring 2019 Track Changes.xml",
+                     "BR Autumn 2018 UTF8.txt"}
         cls.dir = "./resources"
 
     def test_directory_present(self):
@@ -35,11 +37,13 @@ class TestResourcesPresent(BaseTestCase):
 
     def test_files_present(self):
         any_file = "*.*"
-        files_found = glob.glob(os.path.join(self.dir, any_file))
-        basenames = set([os.path.basename(f) for f in files_found])
+        expected = self.files
 
-        self.assertEqual(len(files_found), len(self.files))
-        self.assertEqual(basenames, self.files)
+        files_found = glob.glob(os.path.join(self.dir, any_file))
+        basenames_found = set([os.path.basename(f) for f in files_found])
+
+        self.assertSetEqual(basenames_found, expected)
+        self.assertEqual(len(files_found), len(expected))
 
 
 if __name__ == '__main__':

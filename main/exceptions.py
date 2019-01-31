@@ -68,6 +68,10 @@ class InputFileError(_CodedErrors):
     _strcode = "input_type"
 
 
+class InputFileTrackChangesError(_CodedErrors):
+    _strcode = "input_trackchanges"
+
+
 class InputOperationError(_CodedErrors, RuntimeError):
     """Tried to use methods before calling the check method of the class."""
     _strcode = "input_check_skipped"

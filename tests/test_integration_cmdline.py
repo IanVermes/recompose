@@ -25,7 +25,8 @@ class UserStories_CommandLine(CommandLineTestCase):
         cls.good_file = absolute("./resources/BR Autumn 2018.xml")
         cls.bad_file = absolute("./resources/BR Autumn 2018.docx")
         cls.decoy_file = absolute("./resources/invlaid_input.xml")
-        files = (cls.good_file, cls.bad_file)
+        cls.almost_good_file = absolute("./resources/BR Spring 2019 Track Changes.xml")
+        files = (cls.good_file, cls.bad_file, cls.decoy_file, cls.almost_good_file)
         assert all([exists(f) for f in files]), {f: exists(f) for f in files}
 
         # Get default output filename
@@ -175,7 +176,7 @@ class UserStories_CommandLine(CommandLineTestCase):
             self.assertSubstringsInString(substrings=subs, string=stdout.lower())
 
         # A DOCX and unsuitable XML file are selected by the user
-        user_defined_input_files = [self.bad_file, self.decoy_file]
+        user_defined_input_files = [self.bad_file, self.decoy_file, self.almost_good_file]
         for input_filename in user_defined_input_files:
 
             with self.subTest(infile=input_filename):

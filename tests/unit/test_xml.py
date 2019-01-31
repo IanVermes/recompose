@@ -297,7 +297,7 @@ class Test_XMLAsInput_Suitablilty(InputFileTestCase):
         self.assertTrue(result)
 
     def test_isSuitable_fails(self):
-        inputs = [self.bad_input, self.decoy_input]
+        inputs = [self.bad_input, self.decoy_input, self.track_changes_input]
         inputcheck = self.klass()
 
         for input in inputs:
@@ -308,7 +308,7 @@ class Test_XMLAsInput_Suitablilty(InputFileTestCase):
                 self.assertFalse(result)
 
     def test_isSuitable_fails_fatally(self):
-        inputs = [self.bad_input, self.decoy_input]
+        inputs = [self.bad_input, self.decoy_input, self.track_changes_input]
         inputcheck = self.klass()
         expected_exception = self.package_exception
 
@@ -321,9 +321,32 @@ class Test_XMLAsInput_Suitablilty(InputFileTestCase):
         inputcheck = self.klass()
         input = self.bad_input
         expected_exception = exceptions.InputFileError
-        expected_strings = ["Microsoft", "xml",
-                            os.path.basename(self.bad_input), "wrong", "file",
+        expected_strings = ["Microsoft", "xml", "click", "choose",
+                            os.path.basename(input), "wrong", "file",
                             "type"]
+
+        # Check right exception is raised
+        with self.assertRaises(expected_exception) as failure:
+            inputcheck.isSuitable(input, fatal=True)
+
+        # Check exception is of appropriate type
+        error = failure.exception
+        is_subclass = issubclass(type(error), self.package_exception)
+        self.assertTrue(is_subclass, msg=("Exception is "
+                        f"of an unexpected subtype: {type(error)}"))
+
+        # Check exception has the correct message for the user.
+        self.assertSubstringsInString(substrings=expected_strings,
+                                      string=str(error))
+
+    def test_isSuitable_raises_appropiate_exception_if_xml_has_trackchanges(self):
+        inputcheck = self.klass()
+        input = self.track_changes_input
+        expected_exception = exceptions.InputFileTrackChangesError
+        expected_strings = ["Microsoft", "xml", "cannot be used", "click",
+                            "choose", os.path.basename(input), "file", "Track",
+                            "Changes", "accept", "Review",
+                            "Accept All Changes"]
 
         # Check right exception is raised
         with self.assertRaises(expected_exception) as failure:
@@ -389,6 +412,15 @@ class Test_XMLAsInput_Suitablilty(InputFileTestCase):
         test_files = self.get_test_files(keyword=has)
         instance = self.klass()
         method = instance._parse
+
+        self.check_boolean_fileobject_method(func=method,
+                                             bool2file_map=test_files)
+
+    def test_method_trackchanges(self):
+        has = "trackchanges"
+        test_files = self.get_test_files(keyword=has)
+        instance = self.klass()
+        method = instance._trackchanges
 
         self.check_boolean_fileobject_method(func=method,
                                              bool2file_map=test_files)
