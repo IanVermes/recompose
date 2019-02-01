@@ -34,6 +34,10 @@ class UserStories_CommandLine(CommandLineTestCase):
         cls.default_output_filename = argparser.default_output()
         assert not os.path.exists(cls.default_output_filename)
 
+        # Get default log filename
+        cls.default_log_filename = argparser.default_log()
+        assert not os.path.exists(cls.default_output_filename)
+
         # Format commandline cmd
         cmd_basic_template = "python {filename_script}"
         core_py = absolute(core.__file__)
@@ -46,14 +50,29 @@ class UserStories_CommandLine(CommandLineTestCase):
         assert os.path.isfile(schema_filename)
         cls.schema = etree.XMLSchema(etree.parse(schema_filename))
 
-
     @property
     def output_file(self):
         return self._output_file
 
     @output_file.setter
     def output_file(self, value):
+        if not value:
+            value = self.default_output_filename
         self._output_file = value
+        try:
+            self._output_file_list.append(value)
+        except AttributeError:
+            self._output_file_list = [value]
+
+    @property
+    def log_file(self):
+        return self._log_file
+
+    @log_file.setter
+    def log_file(self, value):
+        if not value:
+            value = self.default_log_filename
+        self._log_file = value
         try:
             self._output_file_list.append(value)
         except AttributeError:
@@ -70,12 +89,14 @@ class UserStories_CommandLine(CommandLineTestCase):
                 if filename and os.path.exists(filename):
                     os.remove(filename)
             self.output_file = ""
+            self.log_file = ""
 
     def setUp(self):
         # This variable is not local to test methods so that the tearDown
         # method can catch the filename when out of test scope. The setUp
         # method resets the value between tests as a precaution.
         self.output_file = ""
+        self.log_file = ""
 
     def tearDown(self):
         # The output file is removed after each test
@@ -93,66 +114,31 @@ class UserStories_CommandLine(CommandLineTestCase):
         self.assertTrue(stdout)
         self.assertIn("usage", stdout.lower())
 
+    # @unittest.skip("for now")
     def test_command_line_entry_correct(self):
+
         # User invokes main.core with an XML file
-        cmd_template = self.cmd_basic + " {file_argument}"
-        substring = {"file_argument": self.good_file}
-        cmd = self.format_cmd(cmd_template, substring)
-
+        cmd = self.user_story_generates_cmd()
         # Program exits cleanly
-        status = 0
-        stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
-
-        # User sees nothing in stdout, all assumed to go well
-        self.assertFalse(stdout)
-
-        # Program yields defualt output file in the current working directory
-        self.output_file = self.default_output_filename
-        self.assertFileInDirectory(file=self.output_file, directory=os.getcwd())
-
+        status = self.user_story_program_runs_from_good_cmd(cmd, user_out=False)
         # outputfile validation
         self.user_story_after_successful_execution(status)
 
     def test_command_line_entry_correct_with_output_argument(self):
 
-        def user_story(self, output_file):
-            # User invokes main.core with an XML file and specified output
-            cmd_template = self.cmd_basic + " {file_argument}" + " {file_output}"
-            self.output_file = output_file
-            substring = {"file_argument": self.good_file,
-                         "file_output": self.output_file}
-            cmd = self.format_cmd(cmd_template, substring)
-
-            # Program exits cleanly
-            status = 0
-            stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
-
-            # User sees nothing in stdout, all assumed to go well
-            self.assertFalse(stdout)
-
-            # Program yields output file at location specified
-            self.assertFileInDirectory(file=self.output_file, directory=os.path.dirname(self.output_file))
-
-            # Program does not name the output file with the default value
-            self.assertFileNotInDirectory(file=self.default_output_filename, directory=os.getcwd())
-            self.assertNotEqual(self.default_output_filename, self.output_file)
-
-            return status
-
-        # Setup
-        expanduser = os.path.expanduser
-        abspath = os.path.abspath
-        basename = "custom_output.xml"
-        user_specified_filenames = [expanduser(f"~/Desktop/{basename}"),
-                                    "foo" + basename,
-                                    abspath(basename)]
-
         # A user chooses a filename for the output file
-        for output_filename in user_specified_filenames:
+        for output_filename in self.user_specified_output_files():
             with self.subTest(filename=output_filename):
                 # User story continues within definition
-                status = user_story(self, output_file=output_filename)
+                cmd = self.user_story_generates_cmd(output_file=output_filename)
+                status = self.user_story_program_runs_from_good_cmd(cmd, user_out=True)
                 self.user_story_after_successful_execution(status)
+
+    def test_command_line_entry_correct_with_output_argument_and_default_logging(self):
+        pass
+
+    def test_command_line_entry_correct_with_output_argument_and_output_logging(self):
+        pass
 
     def test_command_line_entry_bad_file(self):
 
@@ -172,8 +158,11 @@ class UserStories_CommandLine(CommandLineTestCase):
 
             # User informed of bad file in commandline
             self.assertTrue(stdout)
-            subs = ["incompatible", "error", "microsoft word", "save as...", "xml"]
-            self.assertSubstringsInString(substrings=subs, string=stdout.lower())
+            subs = ["input", "suitable", "error", "microsoft word",
+                    "save as...", "xml"]
+            self.assertSubstringsInString(substrings=subs,
+                                          string=stdout.lower(),
+                                          msg=f"\nRecorded stdout: {stdout}")
 
         # A DOCX and unsuitable XML file are selected by the user
         user_defined_input_files = [self.bad_file, self.decoy_file, self.almost_good_file]
@@ -210,6 +199,71 @@ class UserStories_CommandLine(CommandLineTestCase):
                                       string=stdout.lower())
 
     # USER STORIES: sub-stories
+    # USER STORIES: sub-stories
+    # USER STORIES: sub-stories
+
+    def user_story_generates_cmd(self, output_file=None, log_file=None):
+        # User invokes main.core with an XML file and specified output
+        templates = {
+            False: self.cmd_basic + " {file_argument}",
+            True: self.cmd_basic + " {file_argument}" + " {file_output}"
+        }
+        cmd_template = templates[bool(output_file)]
+        if log_file:
+            cmd_template += " {log_output}"
+        ## Set instance attributes for tearDown, default file getting
+        ## and for use in follow-on userstories
+        self.output_file = output_file
+        self.log_file = log_file
+        substrings = {"file_argument": self.good_file,
+                      "file_output": self.output_file,
+                      "file_log": self.log_file}
+        cmd = self.format_cmd(cmd_template, substrings, ignore_precond1=True)
+        return cmd
+
+    def user_specified_output_files(self, basename=None):
+        expanduser = os.path.expanduser
+        abspath = os.path.abspath
+        if basename is None:
+            basename = "custom_output.xml"
+        user_specified_filenames = [expanduser(f"~/Desktop/{basename}"),
+                                    "foo" + basename,
+                                    abspath(basename)]
+        for filename in user_specified_filenames:
+            yield filename
+
+    def user_story_program_runs_from_good_cmd(self, cmd, user_out=False, user_log=False):
+        # Program exits cleanly
+        status = 0
+        stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
+
+        # User sees nothing in stdout, all assumed to go well
+        if not user_log:
+            self.assertFalse(stdout)
+
+        # User included the output destination in cmd
+        if user_out:
+            # Program set user defined output rather than adopting the default
+            self.assertNotEqual(self.default_output_filename, self.output_file)
+            # Program yields output file at location specified
+            self.assertFileInDirectory(file=self.output_file,
+                                       directory=os.path.dirname(self.output_file))
+            # Program does not name the output file with the default value
+            self.assertFileNotInDirectory(file=self.default_output_filename,
+                                          directory=os.getcwd())
+        # User omitted the output destination in cmd
+        elif not user_out:
+            # Program has set the output name as the default value.
+            self.assertEqual(self.default_output_filename, self.output_file)
+            # Program yields default output file at cwd.
+            self.assertFileInDirectory(file=self.default_output_filename,
+                                       directory=os.getcwd())
+
+        if user_log:
+            pass
+        elif not user_log:
+            pass
+        return status
 
     def user_story_after_successful_execution(self, status):
         # Program exited cleanly

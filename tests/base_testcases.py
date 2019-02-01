@@ -196,18 +196,23 @@ class CommandLineTestCase(BaseTestCase):
         return stdout
 
     @classmethod
-    def format_cmd(cls, cmd_template, template_kwargs):
+    def format_cmd(cls, cmd_template, template_kwargs, ignore_precond1=False):
         """Create a safe commandline command."""
-        # Precondition 1
-        curly_left = cmd_template.count(r"{")
-        curly_right = cmd_template.count(r"}")
-        key_count = len(template_kwargs)
-        if curly_left != curly_right or key_count != curly_left:
-            msg = ("The command template is formatted using 'new' Python "
-                   "formatting and hence expects curly bracket notaion. "
-                   "Furthermore, the number of substrings to inject in to the "
-                   "template must match the number of positions for insertion.")
-            raise TypeError(msg)
+        if not ignore_precond1:
+            # Precondition 1
+            curly_left = cmd_template.count(r"{")
+            curly_right = cmd_template.count(r"}")
+            key_count = len(template_kwargs)
+            if curly_left != curly_right or key_count != curly_left:
+                msg = ("The command template is formatted using 'new' Python "
+                       "formatting and hence expects curly bracket notaion. "
+                       "Furthermore, the number of substrings to inject in to the "
+                       "template must match the number of positions for insertion.")
+                raise TypeError(msg)
+        else:
+            # In some of the user stories surplus format strings are
+            # deliberately provided, hence the option to skip this precondition
+            pass
 
         # Precondition 2
         prefixes = ("file", "dir")

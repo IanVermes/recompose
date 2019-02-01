@@ -5,6 +5,8 @@
 Copyright: Ian Vermes 2019
 """
 
+from helpers import logging
+
 import argparse
 import os
 
@@ -13,12 +15,20 @@ class RecomposeArgParser(object):
 
     def __init__(self):
         self.output_basename = "output.xml"
+        self.log_basename = os.path.basename(logging.default_log_filename())
 
-    def default_output(self):
-        basename = self.output_basename
+    def _generate_cwd_filename(self, basename):
         dirname = os.getcwd()
         filename = os.path.abspath(os.path.join(dirname, basename))
         return filename
+
+    def default_output(self):
+        basename = self.output_basename
+        return self._generate_cwd_filename(basename)
+
+    def default_log(self):
+        basename = self.log_basename
+        return self._generate_cwd_filename(basename)
 
     @staticmethod
     def is_file(filename):

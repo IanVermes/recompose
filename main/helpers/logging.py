@@ -126,3 +126,8 @@ def getLogger(name=None):
     if name is None:
         name = "recomposeLogger"
     return logging.getLogger(name)
+
+
+def default_log_filename():
+    """Convenince function to get the package default output detination."""
+    return __DEFAULT_LOGFILENAME
