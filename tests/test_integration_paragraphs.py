@@ -33,7 +33,7 @@ class Test_Paragraph_Selection(InputFileTestCase):
         assert base in os.path.basename(cls.good_input), "xml and txt mismatch!"
 
         with open(comparison_text_filename) as handle:
-            lines = [line.strip("\n") for line in handle]
+            lines = [line.strip() for line in handle]
             no_empty = [l for l in lines if (l and not l.isspace())]
         cls.txt_lines = lines
         cls.txt_lines_no_empty = no_empty
@@ -92,8 +92,18 @@ class Test_Paragraph_Selection(InputFileTestCase):
             # User is confident Prepara is similar in content to para
             with self.subTest(para_index=i):
                 para_string = str(prepara)
+
+                para_string_lower = para_string.lower()
+                text_lower = text.lower()
                 percent = int(self.is_similar(para_string, text) * 100)
-                self.assertGreaterEqual(percent, 99)
+                percent_lower = int(self.is_similar(para_string_lower, text_lower) * 100)
+
+                with self.subTest(case="mixed_case"):
+                    self.assertGreaterEqual(percent, 99)
+                with self.subTest(case="lower"):
+                    self.assertGreaterEqual(percent_lower, 100,
+                    msg=(f"\npreprocess: {repr(para_string_lower)}"
+                         f"\ntext_file : {repr(text_lower)}"))
 
     def test_user_preprocessed_paragraphs_attributes_correspond_to_docx(self):
         input = self.input
@@ -106,12 +116,12 @@ class Test_Paragraph_Selection(InputFileTestCase):
         prepara = paragraphs.PreProcessed(first_para)
 
         # User interacts with attributes
-        docx_preitalic = "Adelman, Rachel E., "
-        self.assertEqual(prepara.pre, docx_preitalic)
-        docx_italic = "The Female Ruse: Women's Deception and Divine Sanction in the Hebrew Bible. "
+        docx_preitalic = "Adelman, Rachel E., ".strip()
+        self.assertEqual(prepara.pre_italic, docx_preitalic)
+        docx_italic = "The Female Ruse: Women's Deception and Divine Sanction in the Hebrew Bible. ".strip()
         self.assertEqual(prepara.italic, docx_italic)
-        docx_postitalic = "Sheffield Phoenix Press, Sheffield, 2017. xv, 256 pp. £60.00. ISBN 978 1 91092 825 7."
-        self.assertEqual(prepara.post, docx_postitalic)
+        docx_postitalic = "Sheffield Phoenix Press, Sheffield, 2017. xv, 256 pp. £60.00. ISBN 978 1 91092 825 7.".strip()
+        self.assertEqual(prepara.post_italic, docx_postitalic)
 
 
 if __name__ == '__main__':

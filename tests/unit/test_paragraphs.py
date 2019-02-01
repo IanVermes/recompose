@@ -124,7 +124,7 @@ class Test_PreProcessed(ParagraphsTestCase):
         other_finder = pre1.xpaths.get(some_query)
         self.assertIs(this_finder, other_finder)
 
-    @unittest.expectedFailure
+    # @unittest.expectedFailure
     def test_attrs_substrings(self):
         iter_para = self.input.iter_paragraphs()
         para = next(iter_para)
@@ -141,7 +141,8 @@ class Test_PreProcessed(ParagraphsTestCase):
         with self.subTest(attr_name="post_italic"):
             self.assertIsInstance(pre.post_italic, str)
             self.assertGreaterEqual(len(pre.post_italic), 1)
-            self.assertEqual(pre.post_italic.count("isbn"), 1)
+            self.assertEqual(pre.post_italic.lower().count("isbn"), 1,
+                             msg=pre.post_italic)
             self.assertGreaterEqual(pre.post_italic.count("."), 4)
             self.assertTrue(pre.post_italic.endswith("."))
             self.assertEqual(len(pre.post_italic), len(pre.post_italic.strip()))
@@ -153,7 +154,6 @@ class Test_PreProcessed(ParagraphsTestCase):
             self.assertTrue(pre.italic.endswith("."))
             self.assertEqual(len(pre.italic), len(pre.italic.strip()))
 
-    # @unittest.expectedFailure
     def test_str_dunder(self):
         text_file = self.text_filename
         with open(text_file) as handle:
@@ -182,12 +182,17 @@ class Test_PreProcessed(ParagraphsTestCase):
                 self.assertEqual(result, expected)
 
     def test_validate_method_passes_correct_italic_pattern(self):
-        xml_func = self.italic_correct_sequence
+        funcs = [self.italic_correct_sequence,
+                 self.italic_correct_sequence_with_small_caps]
         method = paragraphs.PreProcessed._is_valid_italic_pattern
+        funcs = {f: f.__name__ for f in funcs}
 
-        flag = method(xml_func(), _memoize=False)
+        for xml_func, name in funcs.items():
+            with self.subTest(xml_type=name):
 
-        self.assertTrue(flag)
+                flag = method(xml_func(), _memoize=False)
+
+                self.assertTrue(flag)
 
     def test_validate_method_fails_incorrect_italic_patterns(self):
         funcs = [self.italic_interrupted_sequence_raises,
@@ -210,6 +215,7 @@ class Test_PreProcessed(ParagraphsTestCase):
                     method(xml, fatal=True, _memoize=False)
                 errmsg = str(fail.exception)
                 self.assertSubstringsInString(expected_substrings, errmsg)
+
             with self.subTest(xml_type=name, fatal=False):
                 flag = method(xml, fatal=False, _memoize=False)
                 self.assertFalse(flag)
@@ -240,6 +246,18 @@ class Test_PreProcessed(ParagraphsTestCase):
         with self.subTest(section="post"):
             self.assertEqual(exp_post, res_post)
 
+    def test_identify_substrings_method_interprets_smallCaps_tag(self):
+        xml = self.italic_correct_sequence_with_small_caps()
+        get_text = etree.XPath("//w:t/text()", namespaces=xml.nsmap)
+        *_, exp_post = get_text(xml)
+        method = paragraphs.PreProcessed._identify_substrings
+        self.assertFalse(exp_post.isupper(), msg="Precondition")
+
+        *_, res_post = method(xml, _memoize=False)
+
+        self.assertTrue(res_post.isupper())
+        self.assertEqual(exp_post.upper(), res_post)
+
     def italic_correct_sequence(self):
         xml_str = """<w:p xmlns:w="http://google.com">
         <w:r>
@@ -253,6 +271,24 @@ class Test_PreProcessed(ParagraphsTestCase):
         <w:r>
             <w:rPr></w:rPr>
             <w:t>Post Text</w:t>
+        </w:r></w:p>
+        """
+        root = etree.fromstring(xml_str)
+        return root
+
+    def italic_correct_sequence_with_small_caps(self):
+        xml_str = """<w:p xmlns:w="http://google.com">
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>Italic Text</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:smallCaps/></w:rPr>
+            <w:t>isbn</w:t>
         </w:r></w:p>
         """
         root = etree.fromstring(xml_str)
