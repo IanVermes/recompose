@@ -96,5 +96,9 @@ class PreProcessedValueError(_CodedErrors, ValueError):
     """If the class is initialised with the wrong element."""
     _strcode = "preprocessed_init"
 
+class ParagraphItalicPatternWarning(_CodedWarning):
+    """Paragraph lacks the normal non-italic, italic, not-italic pattern."""
+    _strcode = "preprocessed_italic_pattern"
+
 class ExampleWarning(_CodedWarning):
     _strcode = "example_warn"
