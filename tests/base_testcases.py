@@ -20,6 +20,22 @@ tests.context.main()
 class BaseTestCase(unittest.TestCase):
     """Base testcase for the suite."""
 
+    def assertLengthInRange(self, source, min, max, msg=None):
+        try:
+            length = len(source)
+        except TypeError:
+            raise
+        else:
+            usermsg = f" {msg}." if msg else ""
+        if min < 0:
+            errmsg = f"min cannot be less than zero, got {min}."
+            raise ValueError(errmsg)
+        if max < min:
+            errmsg = f"max cannot be less than min({min}), got {max}."
+            raise ValueError(errmsg)
+        self.assertLessEqual(length, max, msg=f"Too long!{usermsg}")
+        self.assertGreaterEqual(length, min, msg=f"Too short!{usermsg}")
+
     def assertHasAttr(self, obj, attr, msg=None):
         if hasattr(obj, attr):
             return
@@ -173,7 +189,7 @@ class ParagraphsTestCase(InputFileTestCase):
 
 class CommandLineTestCase(BaseTestCase):
 
-    def invoke_cmd_via_commandline(self, cmd, expected_status):
+    def invoke_cmd_via_commandline(self, cmd, expected_status, msg=None):
         """Collects the stdout when invoking and validates the exit status."""
         status, stdout = subprocess.getstatusoutput(cmd)
 

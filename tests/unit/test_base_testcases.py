@@ -13,6 +13,51 @@ import tempfile
 import unittest
 import os
 
+class Test_BaseTestCase_AssertMethods_LengthInRange(BaseTestCase):
+
+    def test_assertion_method(self):
+        method = self.assertLengthInRange
+        length = 30
+        string = "x" * length
+        errsmg_tooshort = "Too short!"
+        errmsg_toolong = "Too long!"
+
+        with self.subTest(usage="in range"):
+            method(string, min=0, max=length*2)
+
+        with self.subTest(usage="at max limit"):
+            method(string, min=length-5, max=length)
+
+        with self.subTest(usage="at min limit"):
+            method(string, min=length, max=length+5)
+
+        with self.subTest(usage="out of range - lower bound"):
+            with self.assertRaises(AssertionError) as fail:
+                method(string, min=length+1, max=length*2)
+            self.assertIn(errsmg_tooshort, str(fail.exception))
+
+        with self.subTest(usage="out of range - upper bound"):
+            with self.assertRaises(AssertionError) as fail:
+                method(string, min=0, max=length-1)
+            self.assertIn(errmsg_toolong, str(fail.exception))
+
+    def test_assertion_method_precondtions(self):
+        class LengthLess(): pass
+        length = 20
+        string = "x" * length
+        method = self.assertLengthInRange
+        with self.subTest(problem="min less than zero"):
+            with self.assertRaises(ValueError):
+                method(string, length-length-1, 10)
+
+        with self.subTest(problem="max less than min"):
+            with self.assertRaises(ValueError):
+                method(string, length, length-1)
+
+        with self.subTest(problem="source has no len"):
+            no_length = LengthLess
+            with self.assertRaises(TypeError):
+                method(no_length, length-1, length)
 
 class Test_BaseTestCase_AssertMethods_HasAttr(BaseTestCase):
 
