@@ -5,8 +5,12 @@
 
 Copyright: Ian Vermes 2019
 """
+
 import os
 import configparser
+import textwrap
+import sys
+
 __CONFIG_FILE = os.path.join(__file__, "..", "exception_strings.cfg")
 __CONFIG_FILE = os.path.abspath(__CONFIG_FILE)
 
@@ -21,6 +25,69 @@ class RecomposeError(Exception):
 
 class RecomposeWarning(Warning):
     """Base warning for this package."""
+
+
+class RecomposeExit(RecomposeError):
+
+    def __init__(self, *args, exception=None):
+        if exception is None and len(args):
+            exception = args[0]
+        if exception is None or not isinstance(exception, Exception):
+            cls_name = self.__class__.__name__
+            msg = f"{cls_name} was called without an exception."
+            raise TypeError(msg)
+        else:
+            string = self._printable_string(exception)
+            new_args = [string]
+            super().__init__(*new_args)
+            self._print_self()
+            self.clean_exit()
+
+    @staticmethod
+    def _hanging_indent(string):
+        dedented_text = textwrap.dedent(string).strip()
+        string = textwrap.fill(dedented_text,
+                               initial_indent="\n" + " " * 4,
+                               subsequent_indent=" " * 6,
+                               width=80)
+        return string
+
+    @staticmethod
+    def _deep_hanging_indent(string):
+        dedented_text = textwrap.dedent(string).strip()
+        string = textwrap.fill(dedented_text,
+                               initial_indent="\n" + " " * 6,
+                               subsequent_indent=" " * 8,
+                               width=80)
+        return string
+
+    def _print_self(self):
+        string = f"{self.__class__.__name__}:{str(self)}"
+        print(string)
+
+    def _printable_string(self, exception):
+        exc_name = exception.__class__.__name__
+        args = exception.args
+        string = self._hanging_indent(f"Error: {exc_name}")
+        reason_template = "Reason: {value}"
+        nul_value = "-none given-"
+        if len(args) == 0:
+            value = nul_value
+        elif len(args) == 1:
+            if not args[0]:
+                value = nul_value
+            else:
+                value = str(args[0])
+        else:
+            value = [f"arg{i:2d}: {a}" for i, a in enumerate(args)]
+            value = "".join(map(self.__deep_hanging_indent, value))
+        reason = reason_template.format(value=value, numbers=False)
+        string += self._hanging_indent(reason)
+        return string
+
+    @staticmethod
+    def clean_exit(code=0):
+        sys.exit(code)
 
 
 class __Coded():
@@ -68,7 +135,7 @@ class InputFileError(_CodedErrors):
     _strcode = "input_type"
 
 
-class InputFileTrackChangesError(_CodedErrors):
+class InputFileTrackChangesError(InputFileError):
     _strcode = "input_trackchanges"
 
 
