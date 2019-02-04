@@ -23,13 +23,13 @@ __CONFIG_FILE = _get_relpath_relative_to_this_py("../../logger_setup.cfg")
 __DEFAULT_LOGFILENAME = _get_relpath_relative_to_this_py("../../../logs/recompose.log")
 
 
-def setup_logging(logfilename=None):
+def setup_logging(log_filename=None):
     """Setup the logging module using config file.
 
     Optionally change the location of the log file.
     """
-    def check_writeout_directory(logfilename):
-        dirname = os.path.dirname(logfilename)
+    def check_writeout_directory(log_filename):
+        dirname = os.path.dirname(log_filename)
         if dirname == "":  # Ignore empty string dirname -- local output
             return
         else:
@@ -46,17 +46,17 @@ def setup_logging(logfilename=None):
             detail = f"no file called '{config_file}' was found."
             raise exceptions.LoggingSetupError(detail=detail)
 
-    def get_rawconfig(config_filename, logfilename=None):
+    def get_rawconfig(config_filename, log_filename=None):
         config = configparser.RawConfigParser()
         # Values for overloading
-        if logfilename:
+        if log_filename:
             section = "handler_fileHandler"
             option = "args"
-            value = f"(\'{logfilename}\', \'w\')"
+            value = f"(\'{log_filename}\', \'w\')"
 
         try:
             config.read(config_filename)
-            if logfilename:
+            if log_filename:
                 config.set(section=section, option=option, value=value)
         except configparser.Error as err:
             detail = repr(err)
@@ -65,10 +65,10 @@ def setup_logging(logfilename=None):
 
     config_filename = __CONFIG_FILE
     check_config_file_exists(config_filename)
-    if not logfilename:
-        logfilename = __DEFAULT_LOGFILENAME
-    check_writeout_directory(logfilename)
-    config = get_rawconfig(config_filename, logfilename)
+    if not log_filename:
+        log_filename = default_log_filename()
+    check_writeout_directory(log_filename)
+    config = get_rawconfig(config_filename, log_filename)
 
     try:
         logging.config.fileConfig(config, disable_existing_loggers=False)
