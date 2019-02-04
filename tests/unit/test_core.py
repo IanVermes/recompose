@@ -9,8 +9,11 @@ from tests.base_testcases import BaseTestCase, InputFileTestCase
 import core
 import exceptions
 
+import testfixtures
+
 import tempfile
 import unittest
+import unittest.mock
 import os
 
 
@@ -52,16 +55,23 @@ class TestArguments(InputFileTestCase):
 
         core.main(input, output)
 
-    def test_main_raises_pkg_exception(self):
-        bad_inputs = [self.bad_input, self.decoy_input]
-        expected_exception = exceptions.RecomposeError
+    @unittest.mock.patch("exceptions.RecomposeExit.clean_exit")
+    def test_main_raises_pkg_exception(self, mock_clean_exit):
+        bad_inputs = [self.bad_input, self.decoy_input, self.track_changes_input]
+        pkg_exception = exceptions.RecomposeError
+        expected_exception = exceptions.RecomposeExit
 
         for filename in bad_inputs:
             input = filename
             output = self.output
-            with self.subTest(input=input):
-                with self.assertRaises(expected_exception):
-                    core.main(input, output)
+            with testfixtures.OutputCapture():
+                with self.subTest(input=input):
+                    with self.assertRaises(Exception) as fail:
+                        core.main(input, output)
+                    mock_clean_exit.assert_called()  # SystemExit suppressed.
+                    self.assertIsInstance(fail.exception, pkg_exception)
+                    self.assertIsInstance(fail.exception, expected_exception)
+
 
 
 if __name__ == '__main__':
