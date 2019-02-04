@@ -128,22 +128,53 @@ class UserStories_CommandLine(CommandLineTestCase):
     def test_command_line_entry_correct_with_output_argument(self):
 
         # A user chooses a filename for the output file
-        for output_filename in self.user_specified_output_files():
+        outbasename = "custom_output.xml"
+        for output_filename in self.user_specified_output_files(outbasename):
             with self.subTest(filename=output_filename):
-                # User story continues within definition
+                # User invokes main.core with an XML file and specified output
                 cmd = self.user_story_generates_cmd(output_file=output_filename)
+                # Program runs, nothing printed to stdout and writes output file
                 status = self.user_story_program_runs_from_good_cmd(cmd, user_out=True)
+                self.fail("Fails at output analysis - remove this self.fail "
+                          "block at a later point.")
+                # Program finishes, output file is closed and ready for use.
+                self.user_story_after_successful_execution(status)
+
+    def test_command_line_entry_correct_with_output_argument_and_default_logging(self):
+        # A user chooses a filename for the output file
+        outbasename = "custom_output.xml"
+        for output_filename in self.user_specified_output_files(outbasename):
+            with self.subTest(filename=output_filename):
+                # User invokes main.core with an XML file, specified output
+                # and unspecified logging
+                cmd = self.user_story_generates_cmd(output_file=output_filename, log=True)
+                # Program runs, nothing printed to stdout except some logs
+                # and writes output file.
+                status = self.user_story_program_runs_from_good_cmd(cmd,
+                                                user_out=True, user_log=True)
                 self.fail("Fails at output analysis - remove this self.fail "
                           "block at a later point.")
                 self.user_story_after_successful_execution(status)
 
-    @unittest.expectedFailure
-    def test_command_line_entry_correct_with_output_argument_and_default_logging(self):
-        self.fail("not written")
-
-    @unittest.expectedFailure
     def test_command_line_entry_correct_with_output_argument_and_output_logging(self):
-        self.fail("not written")
+        # A user chooses a filename for the output file
+        outbasename = "custom_output.xml"
+        logbasename = "custom_logfile.log"
+        for output_filename in self.user_specified_output_files(outbasename):
+            for log_filename in self.user_specified_output_files(logbasename):
+                with self.subTest(out=output_filename, log=log_filename):
+                    # User invokes main.core with an XML file, specified output
+                    # and specified logging
+                    cmd = self.user_story_generates_cmd(
+                               output_file=output_filename,
+                               log_file=log_filename)
+                    # Program runs, nothing printed to stdout except some logs
+                    # and writes output file.
+                    status = self.user_story_program_runs_from_good_cmd(cmd,
+                                                    user_out=True, user_log=True)
+                    self.fail("Fails at output analysis - remove this self.fail "
+                              "block at a later point.")
+                    self.user_story_after_successful_execution(status)
 
     def test_command_line_entry_bad_file(self):
 
@@ -208,7 +239,7 @@ class UserStories_CommandLine(CommandLineTestCase):
     # USER STORIES: sub-stories
     # USER STORIES: sub-stories
 
-    def user_story_generates_cmd(self, output_file=None, log_file=None):
+    def user_story_generates_cmd(self, output_file=None, log=False, log_file=None):
         # User invokes main.core with an XML file and specified output
         templates = {
             False: self.cmd_basic + " {file_argument}",
@@ -216,7 +247,11 @@ class UserStories_CommandLine(CommandLineTestCase):
         }
         cmd_template = templates[bool(output_file)]
         if log_file:
-            cmd_template += " {log_output}"
+            log = True
+        if log:
+            cmd_template += " -l"
+        if log_file:
+            cmd_template += " {file_log}"
         ## Set instance attributes for tearDown, default file getting
         ## and for use in follow-on userstories
         self.output_file = output_file
@@ -230,8 +265,8 @@ class UserStories_CommandLine(CommandLineTestCase):
     def user_specified_output_files(self, basename=None):
         expanduser = os.path.expanduser
         abspath = os.path.abspath
-        if basename is None:
-            basename = "custom_output.xml"
+        if not basename:
+            raise ValueError(f"arg is {repr(basename)}")
         user_specified_filenames = [expanduser(f"~/Desktop/{basename}"),
                                     "foo" + basename,
                                     abspath(basename)]
@@ -246,6 +281,11 @@ class UserStories_CommandLine(CommandLineTestCase):
         # User sees nothing in stdout, all assumed to go well
         if not user_log:
             self.assertFalse(stdout)
+        # Unless logging is set, in which case only critical & error get seen.
+        else:
+            not_seen = ["DEBUG", "INFO", "WARNING"]
+            for level in not_seen:
+                self.assertNotIn(level, stdout)
 
         # User included the output destination in cmd
         if user_out:
@@ -266,9 +306,16 @@ class UserStories_CommandLine(CommandLineTestCase):
                                        directory=os.getcwd())
 
         if user_log:
-            pass  # TODO - logging options
+            # Program writes log file to either user or default location.
+            self.assertFileInDirectory(file=self.log_file,
+                                       directory=os.path.dirname(self.log_file))
         elif not user_log:
-            pass  # TODO - logging options
+            # Program has is not enabled for logging, so no user log file
+            ## Thus log file == default log file BUT notthing is written.
+            self.assertEqual(self.default_log_filename, self.log_file)
+            # Program has not written a log file to cwd.
+            self.assertFileNotInDirectory(file=self.default_log_filename,
+                                          directory=os.getcwd())
         return status
 
     @unittest.expectedFailure

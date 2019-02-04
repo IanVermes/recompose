@@ -29,6 +29,7 @@ Copyright: Ian Vermes 2019
 import exceptions
 from helpers.argparse import RecomposeArgParser
 from helpers.xml import XMLAsInput
+from helpers.logging import setup_logging, finish_logging
 
 import os
 
@@ -53,28 +54,27 @@ def main(input_filename, output_filename):
     input = XMLAsInput()
     try:
         input.isSuitable(input_filename, fatal=True)
-    except exceptions.RecomposeError:
-        raise
-    # ext = os.path.splitext(input_filename)[1]  #TODO
-    # if ext != ".xml":
-    #     msg = (f"The file '{os.path.basename(input_filename)}' is incompatible"
-    #            "with this program. Please use Microsoft Word to generate a"
-    #            "suitable XML file. This can be accomplised as follows: 1) Open"
-    #            "the document in Microsoft Word, 2) in the menubar go to 'File'"
-    #            "> 'Save As...' to open as dialog window, 3) choose the 'File"
-    #            "Format' called XML from the spinner at the bottom of the dialog"
-    #            "window, 4) choose a suitable location to save the file, 5)"
-    #            " click 'Save'.\nNow run this program again with the new XML"
-    #            "file.")
-    #     raise TypeError(msg)
+    except exceptions.InputFileError as err:
+        raise exceptions.RecomposeExit(exception=err) from None
     else:
         with open(output_filename, "w") as handle:
             handle.write("foo")
         return
 
 
+def main_wrapper(log_filename=None, **kwargs):
+    """Entry point with logging tidyed as necessary."""
+    if log_filename:
+        try:
+            setup_logging(log_filename)
+            main(**kwargs)
+        finally:
+            finish_logging()
+    else:
+        main(**kwargs)
+
+
 if __name__ == '__main__':
     argparser = RecomposeArgParser()
-    args = argparser.get_args()
-    kwargs = {"input_filename": args.input, "output_filename": args.output}
-    main(**kwargs)
+    kwargs = vars(argparser.get_args())
+    main_wrapper(**kwargs)

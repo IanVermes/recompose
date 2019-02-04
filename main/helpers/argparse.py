@@ -59,11 +59,11 @@ class RecomposeArgParser(object):
         desc = ("Read a Microsoft Word XML and produce a books-received "
                 "XML as output.")
         parser = argparse.ArgumentParser(description=desc)
-        parser.add_argument("input",
+        parser.add_argument("input_filename",
                             metavar="XML",
                             type=lambda x: self.is_file(x),
                             help="The xml file to process.")
-        parser.add_argument("output",
+        parser.add_argument("output_filename",
                             nargs='?',
                             metavar="OUTPUT",
                             type=str,
@@ -72,6 +72,19 @@ class RecomposeArgParser(object):
                                   "create a file called "
                                   f"'{self.output_basename}' in the current "
                                   "working directory.")
+        )
+        parser.add_argument('-l','--log',
+                            dest="log_filename",
+                            nargs='?',
+                            metavar="LOG",
+                            type=str,
+                            const=self.default_log(),
+                            default=None,
+                            help=("Will write a log file to "
+                                  f"'{self.log_basename}' in the current working "
+                                  "directory, otherwise logging is disabled. "
+                                  "Optionally one can specify the log file "
+                                  "location.")
         )
 
         return parser
