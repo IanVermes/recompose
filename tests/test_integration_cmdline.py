@@ -114,7 +114,6 @@ class UserStories_CommandLine(CommandLineTestCase):
         self.assertTrue(stdout)
         self.assertIn("usage", stdout.lower())
 
-    # @unittest.skip("for now")
     def test_command_line_entry_correct(self):
 
         # User invokes main.core with an XML file
@@ -122,6 +121,8 @@ class UserStories_CommandLine(CommandLineTestCase):
         # Program exits cleanly
         status = self.user_story_program_runs_from_good_cmd(cmd, user_out=False)
         # outputfile validation
+        self.fail("Fails at output analysis - remove this self.fail block at "
+                  "a later point.")
         self.user_story_after_successful_execution(status)
 
     def test_command_line_entry_correct_with_output_argument(self):
@@ -132,13 +133,17 @@ class UserStories_CommandLine(CommandLineTestCase):
                 # User story continues within definition
                 cmd = self.user_story_generates_cmd(output_file=output_filename)
                 status = self.user_story_program_runs_from_good_cmd(cmd, user_out=True)
+                self.fail("Fails at output analysis - remove this self.fail "
+                          "block at a later point.")
                 self.user_story_after_successful_execution(status)
 
+    @unittest.expectedFailure
     def test_command_line_entry_correct_with_output_argument_and_default_logging(self):
-        pass
+        self.fail("not written")
 
+    @unittest.expectedFailure
     def test_command_line_entry_correct_with_output_argument_and_output_logging(self):
-        pass
+        self.fail("not written")
 
     def test_command_line_entry_bad_file(self):
 
@@ -148,8 +153,8 @@ class UserStories_CommandLine(CommandLineTestCase):
             substring = {"file_argument": input_filename}
             cmd = self.format_cmd(cmd_template, substring)
 
-            # Program exits abruptly
-            status = 1
+            # Program exits cleanly but with helpful information printed.
+            status = 0
             stdout = self.invoke_cmd_via_commandline(cmd, expected_status=status)
 
             # No output file is made
@@ -162,7 +167,8 @@ class UserStories_CommandLine(CommandLineTestCase):
                     "save as...", "xml"]
             self.assertSubstringsInString(substrings=subs,
                                           string=stdout.lower(),
-                                          msg=f"\nRecorded stdout: {stdout}")
+                                          msg=(" the recorded stdout is as "
+                                               f"follows\n\"{stdout}\""))
 
         # A DOCX and unsuitable XML file are selected by the user
         user_defined_input_files = [self.bad_file, self.decoy_file, self.almost_good_file]
@@ -260,11 +266,12 @@ class UserStories_CommandLine(CommandLineTestCase):
                                        directory=os.getcwd())
 
         if user_log:
-            pass
+            pass  # TODO - logging options
         elif not user_log:
-            pass
+            pass  # TODO - logging options
         return status
 
+    @unittest.expectedFailure
     def user_story_after_successful_execution(self, status):
         # Program exited cleanly
         self.assertEqual(0, status)
