@@ -188,6 +188,73 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
             with self.assertLogs():
                 example_func()
 
+    def test_decorator_also_is_context_manager(self):
+        decorator_cm = helpers.logging.log_and_reraise
+        expected_exception = ValueError
+
+        def undecorated_func():
+            raise expected_exception("generic message")
+
+        with self.assertRaises(expected_exception):
+            with decorator_cm():
+                with self.assertLogs():
+                    undecorated_func()
+
+    def test_decorator_can_suppress_specified_exceptions(self):
+        decorator_cm = helpers.logging.log_suppress_or_reraise
+        to_suppress = TypeError
+
+        @decorator_cm(to_suppress)
+        def decorated_func():
+            raise to_suppress("generic message")
+
+        def undecorated_func():
+            raise to_suppress("generic message")
+
+        with self.subTest(implementation="context manager"):
+            with self.assertLogs():
+                try:
+                    with decorator_cm(to_suppress):
+                        undecorated_func()
+                except to_suppress:
+                    passes_test = False
+                else:
+                    passes_test = True
+            self.assertTrue(passes_test)
+
+        with self.subTest(implementation="decorator"):
+            with self.assertLogs():
+                try:
+                    decorated_func()
+                except to_suppress:
+                    passes_test = False
+                else:
+                    passes_test = True
+            self.assertTrue(passes_test)
+
+    def test_decorator_can_raises_unspecified_exceptions(self):
+        decorator_cm = helpers.logging.log_suppress_or_reraise
+        to_suppress = TypeError
+        unexpected_exc = ValueError
+
+        @decorator_cm(to_suppress)
+        def decorated_func():
+            raise unexpected_exc("generic message")
+
+        def undecorated_func():
+            raise unexpected_exc("generic message")
+
+        with self.subTest(implementation="context manager"):
+            with self.assertRaises(unexpected_exc):
+                with self.assertLogs():
+                    with decorator_cm(to_suppress):
+                        undecorated_func()
+
+        with self.subTest(implementation="decorator"):
+            with self.assertRaises(unexpected_exc):
+                with self.assertLogs():
+                    decorated_func()
+
     def test_decorator_logs_package_exceptions_as_errors(self):
         decorator = helpers.logging.log_and_reraise
         expected_exception = exceptions.RecomposeError

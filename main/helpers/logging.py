@@ -2,15 +2,26 @@
 # -*- coding: utf8 -*-
 """Logging function for Recompose.
 
+classes:
+    LogSuppressOrReraise    - decorator/context manager
+
+functions:
+    setup_logging
+    log_and_reraise         - decorator/context manager
+    log_suppress_or_reraise - decorator/context manager
+    finish_logging
+    getLogger
+    default_log_filename
+
 Copyright: Ian Vermes 2019
 """
 import exceptions
 
 import os
 import logging
+import contextlib
 import logging.config
 import configparser
-import functools
 
 
 def _get_relpath_relative_to_this_py(filename):
@@ -21,6 +32,65 @@ def _get_relpath_relative_to_this_py(filename):
 
 __CONFIG_FILE = _get_relpath_relative_to_this_py("../../logger_setup.cfg")
 __DEFAULT_LOGFILENAME = _get_relpath_relative_to_this_py("../../../logs/recompose.log")
+
+
+class LogSuppressOrReraise(contextlib.ContextDecorator):
+    """Context manager or decorator - logs, raises & can suppress exceptions.
+
+    Args:
+        exceptions: Exception type(s) to suppress otherwise raise all others.
+                    By default, does not suppress any exceptions.
+    Kwarg:
+        logger(str, logging.Logger): The name of a logger or logger object.
+                    By default, uses the module logger if available otherwise
+                    the package logger.
+    Exceptions:
+        TypeError
+    """
+
+    def __init__(self, *exceptions, logger=None):
+        super().__init__()
+        self.suppress_exceptions = set(self._flatten(*exceptions))
+        if logger is None:
+            try:
+                self.logger = LOGGER
+            except NameError:
+                self.logger = getLogger()
+        else:
+            if isinstance(logger, str):
+                self.logger = getLogger(logger)
+            elif isinstance(logger, (logging.RootLogger, logging.Logger)):
+                self.logger = logger
+            else:
+                msg = f"Accepts logging.Logger or str not {type(logger)}"
+                raise TypeError(msg)
+
+    def _log_according_to_exc(self, exc):
+        if not exc:
+            return
+        elif isinstance(exc, exceptions.RecomposeWarning):
+            self.logger.warning(exc)
+        elif isinstance(exc, exceptions.RecomposeError):
+            self.logger.error(exc)
+        else:
+            self.logger.critical(exc)
+
+    @classmethod
+    def _flatten(cls, *args):
+        output = []
+        for arg in args:
+            if isinstance(arg, (list, tuple)):
+                output.extend(cls._flatten(*list(arg)))
+            else:
+                output.append(arg)
+        return output
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._log_according_to_exc(exc=exc_value)
+        return exc_type in self.suppress_exceptions
 
 
 def setup_logging(log_filename=None):
@@ -79,40 +149,20 @@ def setup_logging(log_filename=None):
 
 
 def log_and_reraise(logger=None):
-    """Decorator that logs exceptions as errors before reraising."""
-    if logger is None:
-        try:
-            logger = LOGGER
-        except NameError:
-            logger = getLogger()
-    else:
-        if isinstance(logger, str):
-            logger = getLogger(logger)
-        elif isinstance(logger, (logging.RootLogger, logging.Logger)):
-            logger = logger
-        else:
-            msg = f"Accepts logging.Logger or str not {type(logger)}"
-            raise TypeError(msg)
+    """Context manager or decorator - logs & raises exceptions.
 
-    def middle(func):
-        functools.wraps(func)
+    Convenince function to support older implementation.
+    """
+    exceptions = []
+    return LogSuppressOrReraise(*exceptions, logger=logger)
 
-        def decorator(*args, **kwargs):
-            try:
-                result = func(*args, **kwargs)
-            except exceptions.RecomposeWarning as err:
-                logger.warning(err)
-                raise
-            except exceptions.RecomposeError as err:
-                logger.error(err)
-                raise
-            except Exception as err:
-                logger.critical(err)
-                raise
-            else:
-                return result
-        return decorator
-    return middle
+
+def log_suppress_or_reraise(*exceptions, logger=None):
+    """Context manager or decorator - logs, raises and can suppress exceptions.
+
+    Convenince function to support older implementation.
+    """
+    return LogSuppressOrReraise(*exceptions, logger=logger)
 
 
 def finish_logging():
