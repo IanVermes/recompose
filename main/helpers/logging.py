@@ -18,9 +18,9 @@ Copyright: Ian Vermes 2019
 import exceptions
 
 import os
-import logging
+import logging as py_logging
 import contextlib
-import logging.config
+import logging.config as py_logging_config
 import configparser
 
 
@@ -48,9 +48,18 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         TypeError
     """
 
+    _DEBUG = False
+
     def __init__(self, *exceptions, logger=None):
         super().__init__()
         self.suppress_exceptions = set(self._flatten(*exceptions))
+        self._assign_logger(logger)
+
+    def _assign_logger(self, logger=None):
+        if self._DEBUG:
+            self.logger = py_logging.getLogger('dummyLogger')
+            self.logger.addHandler(py_logging.NullHandler())
+            return
         if logger is None:
             try:
                 self.logger = LOGGER
@@ -59,7 +68,7 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         else:
             if isinstance(logger, str):
                 self.logger = getLogger(logger)
-            elif isinstance(logger, (logging.RootLogger, logging.Logger)):
+            elif isinstance(logger, (py_logging.RootLogger, py_logging.Logger)):
                 self.logger = logger
             else:
                 msg = f"Accepts logging.Logger or str not {type(logger)}"
@@ -141,7 +150,7 @@ def setup_logging(log_filename=None):
     config = get_rawconfig(config_filename, log_filename)
 
     try:
-        logging.config.fileConfig(config, disable_existing_loggers=False)
+        py_logging_config.fileConfig(config, disable_existing_loggers=False)
     except Exception as err:
         detail = repr(err)
         raise exceptions.LoggingSetupError(detail=detail) from err
@@ -167,7 +176,7 @@ def log_suppress_or_reraise(*exceptions, logger=None):
 
 def finish_logging():
     """Tidy up and end all logging operations."""
-    logging.shutdown()
+    py_logging.shutdown()
     return
 
 
@@ -175,7 +184,7 @@ def getLogger(name=None):
     """Convenince function to get the default logger."""
     if name is None:
         name = "recomposeLogger"
-    return logging.getLogger(name)
+    return py_logging.getLogger(name)
 
 
 def default_log_filename():

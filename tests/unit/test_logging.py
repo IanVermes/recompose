@@ -6,7 +6,7 @@ Copyright: Ian Vermes 2019
 """
 from tests.base_testcases import LoggingTestCase
 
-import helpers.logging
+import helpers.logging as pkg_logging
 import exceptions
 
 import testfixtures
@@ -26,7 +26,7 @@ class Test_Logging_Setup(LoggingTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config_file = getattr(helpers.logging, "__CONFIG_FILE")
+        cls.config_file = getattr(pkg_logging, "__CONFIG_FILE")
 
     def test_has_config_file(self):
         config = self.config_file
@@ -97,7 +97,7 @@ class Test_Logging_Setup(LoggingTestCase):
             self.assertEqual(unformatted_value % exp_mapping, res_value)
 
     def test_helper_logging_module_has_its_own_default_logfilename(self):
-        global_default_logfilename = getattr(helpers.logging, "__DEFAULT_LOGFILENAME")
+        global_default_logfilename = getattr(pkg_logging, "__DEFAULT_LOGFILENAME")
 
         is_valid_dir = os.path.isdir(os.path.dirname(global_default_logfilename))
 
@@ -110,12 +110,12 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
 
     @classmethod
     def setUpClass(cls):
-        config_file = getattr(helpers.logging, "__CONFIG_FILE")
+        config_file = getattr(pkg_logging, "__CONFIG_FILE")
         cls.config = config = configparser.ConfigParser()
         cls.config.read(config_file)
         cls.config_default_log = config.get(config.default_section,
                                             "logfilename")
-        cls.module_default_log = getattr(helpers.logging,
+        cls.module_default_log = getattr(pkg_logging,
                                          "__DEFAULT_LOGFILENAME")
 
     def setUp(self):
@@ -130,10 +130,13 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
                 os.remove(file)
 
     def precondition(self, other_file=None):
-        self.assertFalse(os.path.exists(self.config_default_log))
-        self.assertFalse(os.path.exists(self.module_default_log))
+        files = [self.config_default_log, self.module_default_log]
         if other_file is not None:
-            self.assertFalse(os.path.exists(other_file))
+            files.append(other_file)
+        for unexpected_file in files:
+            self.assertFalse(os.path.exists(unexpected_file),
+                             msg=("File found & not tidied by earlier test: "
+                                  f"{unexpected_file}"))
 
     def test_setup_function_overloads_config_logfilename_DEFAULT(self):
         self.precondition()
@@ -141,8 +144,8 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         self.remove_these.append(expected)
 
         with testfixtures.OutputCapture() as _:
-            helpers.logging.setup_logging()
-            helpers.logging.finish_logging()
+            pkg_logging.setup_logging()
+            pkg_logging.finish_logging()
 
         self.assertFalse(os.path.exists(self.config_default_log))
         self.assertTrue(os.path.exists(expected))
@@ -154,8 +157,8 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
             self.precondition(other_file=user_defined_logfilename)
 
             with testfixtures.OutputCapture() as _:
-                helpers.logging.setup_logging(user_defined_logfilename)
-                helpers.logging.finish_logging()
+                pkg_logging.setup_logging(user_defined_logfilename)
+                pkg_logging.finish_logging()
 
             self.assertFalse(os.path.exists(self.config_default_log))
             self.assertFalse(os.path.exists(self.module_default_log))
@@ -172,12 +175,12 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         self.assertFalse(os.path.exists(os.path.dirname(bad_logfilename)))
 
         with self.assertRaises(expected_exception) as fail:
-            helpers.logging.setup_logging(bad_logfilename)
-        helpers.logging.finish_logging()
+            pkg_logging.setup_logging(bad_logfilename)
+        pkg_logging.finish_logging()
         self.assertSubstringsInString(expected_substrings, str(fail.exception))
 
     def test_decorator_raises_exceptions(self):
-        decorator = helpers.logging.log_and_reraise
+        decorator = pkg_logging.log_and_reraise
         expected_exception = ValueError
 
         @decorator()
@@ -189,19 +192,20 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
                 example_func()
 
     def test_decorator_also_is_context_manager(self):
-        decorator_cm = helpers.logging.log_and_reraise
+        decorator_cm = pkg_logging.log_and_reraise
         expected_exception = ValueError
 
         def undecorated_func():
             raise expected_exception("generic message")
-
-        with self.assertRaises(expected_exception):
-            with decorator_cm():
+            with self.assertRaises(expected_exception):
                 with self.assertLogs():
-                    undecorated_func()
+
+                    # Actual operation
+                    with decorator_cm():
+                            undecorated_func()
 
     def test_decorator_can_suppress_specified_exceptions(self):
-        decorator_cm = helpers.logging.log_suppress_or_reraise
+        decorator_cm = pkg_logging.log_suppress_or_reraise
         to_suppress = TypeError
 
         @decorator_cm(to_suppress)
@@ -233,7 +237,7 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
             self.assertTrue(passes_test)
 
     def test_decorator_can_raises_unspecified_exceptions(self):
-        decorator_cm = helpers.logging.log_suppress_or_reraise
+        decorator_cm = pkg_logging.log_suppress_or_reraise
         to_suppress = TypeError
         unexpected_exc = ValueError
 
@@ -256,7 +260,7 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
                     decorated_func()
 
     def test_decorator_logs_package_exceptions_as_errors(self):
-        decorator = helpers.logging.log_and_reraise
+        decorator = pkg_logging.log_and_reraise
         expected_exception = exceptions.RecomposeError
         logger = self.logging_builtin.getLogger("exampleLogger")
 
@@ -269,7 +273,7 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
                              exception_type=expected_exception)
 
     def test_decorator_logs_package_warnings_as_warnings(self):
-        decorator = helpers.logging.log_and_reraise
+        decorator = pkg_logging.log_and_reraise
         expected_exception = exceptions.RecomposeWarning
         logger = self.logging_builtin.getLogger("exampleLogger")
 
@@ -282,7 +286,7 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
                              exception_type=expected_exception)
 
     def test_decorator_logs_nonpackage_exceptions_as_critical(self):
-        decorator = helpers.logging.log_and_reraise
+        decorator = pkg_logging.log_and_reraise
         expected_exception = ValueError
         logger = self.logging_builtin.getLogger("exampleLogger")
 
@@ -307,7 +311,7 @@ class Test_Logging_Runtime_Behaviour(LoggingTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config_file = getattr(helpers.logging, "__CONFIG_FILE")
+        cls.config_file = getattr(pkg_logging, "__CONFIG_FILE")
 
     def setUp(self):
         super().setUp()
