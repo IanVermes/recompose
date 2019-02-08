@@ -315,7 +315,7 @@ class Test_LoggerWrapper(LoggingTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.message = f"Message from {cls.__class__.__name__}."
+        cls.message = f"Message from {cls.__name__}."
         cls.default_log_filename = pkg_logging.default_log_filename()
         cls.coded_levels = {"DEBUG": 10, "INFO": 20, "WARNING": 30,
                             "ERROR": 40, "CRITICAL": 50}
@@ -375,7 +375,7 @@ class Test_LoggerWrapper(LoggingTestCase):
         self.addCleanup(pkg_logging.finish_logging)
         levels = "DEBUG INFO WARNING ERROR CRITICAL".split()
 
-        wrapped_logger = pkg_logging.getLogger(wrap=True)
+        wrapped_logger = pkg_logging.getLogger()
 
         for level in levels:
             with self.subTest(level=level):
@@ -390,7 +390,7 @@ class Test_LoggerWrapper(LoggingTestCase):
             pkg_logging.setup_logging()
             self.addCleanup(pkg_logging.finish_logging)
 
-            wrapped_logger = pkg_logging.getLogger(wrap=True)
+            wrapped_logger = pkg_logging.getLogger()
 
             for level in levels:
                 wrapped_logger.log(self.coded_levels[level], self.message)
@@ -411,8 +411,30 @@ class Test_LoggerWrapper(LoggingTestCase):
             self.assertSubstringsInString(expected_levels, stderr)
             self.assertSubstringsNotInString(unexpected_levels, stderr)
 
-
     def test_wrapped_logger_autologs_exceptions_specially(self):
+        import logging
+        logger = logging.getLogger(self.random_name)
+        logger.setLevel("WARNING")
+        msg = self.message
+        msg_warn = msg + str(hash("WARNING"))
+        msg_err = msg + str(hash("ERROR"))
+        msg_crit = msg + str(hash("CRITICAL"))
+        errors = {"ERROR": exceptions.RecomposeError(msg_warn),
+                  "WARNING": exceptions.RecomposeWarning(msg_err),
+                  "CRITICAL": Exception(msg_crit)}
+
+        wrapped_logger = pkg_logging.LoggerWrapper(logger)
+
+        for level, error in errors.items():
+            with self.subTest(log_exc_expecting=error):
+                with self.assertLogs() as captured:
+                    wrapped_logger.autolog(error)
+                expected = [level, str(error)]
+                output = captured.output.pop()
+                self.assertSubstringsInString(expected, output)
+
+
+    def test_wrapped_logger_autologs_after_setup_exceptions_specially(self):
         pkg_logging.setup_logging()
         self.addCleanup(pkg_logging.finish_logging)
         msg = self.message
@@ -420,11 +442,11 @@ class Test_LoggerWrapper(LoggingTestCase):
                   "WARNING": exceptions.RecomposeWarning(msg),
                   "CRITICAL": Exception(msg)}
 
-        wrapped_logger = pkg_logging.getLogger(wrap=True)
+        wrapped_logger = pkg_logging.getLogger()
 
         for level, error in errors.items():
             with self.subTest():
-                with self.assertLogs(wrapped_logger.logger, level):
+                with self.assertLogs(wrapped_logger.logger):
                     wrapped_logger.autolog(error)
 
 
@@ -460,7 +482,7 @@ class Test_LoggerWrapper(LoggingTestCase):
         pkg_logging.setup_logging()
         self.addCleanup(pkg_logging.finish_logging)
 
-        logger = pkg_logging.getLogger(wrap=True)
+        logger = pkg_logging.getLogger()
 
         self.assertIsInstance(logger, logging.LoggerAdapter)
         self.assertIsInstance(logger, pkg_logging.LoggerWrapper)

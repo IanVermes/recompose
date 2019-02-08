@@ -33,6 +33,7 @@ def _get_relpath_relative_to_this_py(filename):
 
 __CONFIG_FILE = _get_relpath_relative_to_this_py("../../logger_setup.cfg")
 __DEFAULT_LOGFILENAME = _get_relpath_relative_to_this_py("../../../logs/recompose.log")
+__DEFAULT_LOGGER_NAME = "recomposeLogger"
 
 
 class LogSuppressOrReraise(contextlib.ContextDecorator):
@@ -58,8 +59,9 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
 
     def _assign_logger(self, logger=None):
         if self._DEBUG:
-            self.logger = py_logging.getLogger('dummyLogger')
-            self.logger.addHandler(py_logging.NullHandler())
+            logger = LoggerWrapper(py_logging.getLogger('dummyLogger'))
+            logger.logger.addHandler(py_logging.NullHandler())
+            self.logger = logger
             return
         if logger is None:
             try:
@@ -69,8 +71,10 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         else:
             if isinstance(logger, str):
                 self.logger = getLogger(logger)
-            elif isinstance(logger, (py_logging.RootLogger, py_logging.Logger)):
+            elif isinstance(logger, LoggerWrapper):
                 self.logger = logger
+            elif isinstance(logger, (py_logging.RootLogger, py_logging.Logger)):
+                self.logger = LoggerWrapper(logger)
             else:
                 msg = f"Accepts logging.Logger or str not {type(logger)}"
                 raise TypeError(msg)
@@ -78,12 +82,8 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
     def _log_according_to_exc(self, exc):
         if not exc:
             return
-        elif isinstance(exc, exceptions.RecomposeWarning):
-            self.logger.warning(exc)
-        elif isinstance(exc, exceptions.RecomposeError):
-            self.logger.error(exc)
         else:
-            self.logger.critical(exc)
+            self.logger.autolog(exc)
 
     @classmethod
     def _flatten(cls, *args):
@@ -104,6 +104,18 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
 
 
 class LoggerWrapper(py_logging.LoggerAdapter):
+    """A logger adapter that logs package exceptions appropiately by level.
+
+    Shares the same interface as a logger.
+
+    Init:
+        logger(logging.Logger or logging.RootLogger)
+
+    Methods:
+        autolog: Log exceptions with the appropiate level, otherwise log the
+                 message/object at level set by the logger, unless the level is
+                 otherwise specified.
+    """
 
     def __init__(self, logger):
         extra = {}
@@ -119,9 +131,26 @@ class LoggerWrapper(py_logging.LoggerAdapter):
         return self.logger.level
 
     def autolog(self, source, level=None, **kwargs):
+        """Log the stringable object at an appropiate level.
+
+        The level of the logging record is in general the same as the logger
+        level unless it is an exception which hav predefined levels or if the
+        level kwarg is specified, in which case the interface is like that of
+        logger.log.
+
+        Exceptions are logged as WARNING or greater, with package warnings
+        a WARNING, package errors an ERROR and all other exceptions CRITICAL.
+
+        Args:
+            source: Strings, exceptions, or objects that are stringable.
+        Kwargs:
+            level: Numeric code or string code, if specified, otherwise default
+                   is to use logger.level or follow exception rules (see above).
+            **kwargs: Whichever kwargs logger.log permits.
+        """
         if isinstance(source, exceptions.RecomposeWarning):
             self.warning(source, **kwargs)
-        elif isinstance(source, exceptions.RecomposeWarning):
+        elif isinstance(source, exceptions.RecomposeError):
             self.error(source, **kwargs)
         elif isinstance(source, Exception):
             self.critical(source, **kwargs)
@@ -214,13 +243,11 @@ def finish_logging():
     return
 
 
-def getLogger(name=None, wrap=False):
+def getLogger(name=None):
     """Convenince function to get the default logger."""
     if name is None:
-        name = "recomposeLogger"
-    logger = py_logging.getLogger(name)
-    if wrap:
-        logger = LoggerWrapper(logger)
+        name = __DEFAULT_LOGGER_NAME
+    logger = LoggerWrapper(py_logging.getLogger(name))
     return logger
 
 
