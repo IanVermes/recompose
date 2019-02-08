@@ -90,59 +90,118 @@ qui officia deserunt mollit anim id est laborum.
         cls.all_subs = ["Lorem", "ipsum", "consequat", "dolor", "Excepteur",
                         "esse", "in", "est", "voluptate"]
         cls.some_overlap_subs = ["Lorem", "ipsum", "consequat", "foobar",
-                                 "pedestrian", "doctor"]
+                                 "pedestrian", "doctor", "toilet"]
         cls.no_subs = ["foobar", "George", "president", "light", "down",
-                       "extinguish"]
+                       "extinguish", "fishing", "articulate", "petty"]
+        cls.method_in = cls.assertSubstringsInString
+        cls.method_notin = cls.assertSubstringsNotInString
 
     def test_all_substrings_present(self):
         subs = self.all_subs
 
-        self.assertSubstringsInString(substrings=subs, string=self.string)
+        # Test assert substrings IN string
+        with self.subTest(method=self.method_in.__name__):
+            self.method_in(substrings=subs, string=self.string)
 
+        # Test assert substrings NOT IN string
+        with self.subTest(method=self.method_notin.__name__):
+            with self.assertRaises(AssertionError) as failure:
+                self.method_notin(substrings=subs, string=self.string)
+            # Assertion error message test
+            err_msg_subs = list(map(lambda x: x.lower(), subs))
+            err_msg_subs.append("unexpectedly present")
+            self.assertSubstringsInString(substrings=err_msg_subs,
+                                          string=str(failure.exception).lower(),
+                                          msg=f"orginal: {str(failure.exception)}")
 
     def test_some_substrings_present(self):
         subs = self.some_overlap_subs
+        not_in_count = 4
+        subs_notin = [s.lower() for s in subs[-not_in_count:]]
+        subs_in = [s.lower() for s in (set(subs) - set(subs_notin))]
 
-        with self.assertRaises(AssertionError) as failure:
-            self.assertSubstringsInString(substrings=subs, string=self.string)
+        # Test assert substrings IN string
+        with self.subTest(method=self.method_in.__name__):
+            with self.assertRaises(AssertionError) as fail:
+                self.method_in(substrings=subs, string=self.string)
+            # Assertion error message test: setup
+            err_msg_subs = subs_notin
+            err_msg_subs.extend([f"{len(subs_in)}", f"{len(subs)}",
+                                 "unexpectedly missing"])
+            # Assertion error message test
+            self.assertSubstringsInString(substrings=err_msg_subs,
+                                          string=str(fail.exception).lower(),
+                                          msg=f"orginal: {str(fail.exception)}")
 
-        err_msg_subs = ["3", "6", "unexpectly missing"] + subs[-3:]
-        self.assertSubstringsInString(substrings=err_msg_subs,
-                                      string=str(failure.exception).lower(),
-                                      msg=f"orginal: {str(failure.exception)}")
+        # Test assert substrings NOT IN string
+        with self.subTest(method=self.method_notin.__name__):
+            with self.assertRaises(AssertionError) as fail:
+                self.method_notin(substrings=subs, string=self.string)
+            # Assertion error message test: setup
+            err_msg_subs = subs_in
+            err_msg_subs.extend([f"{len(subs_notin)}", f"{len(subs)}",
+                                 "unexpectedly present"])
+            # Assertion error message test
+            self.assertSubstringsInString(substrings=err_msg_subs,
+                                          string=str(fail.exception).lower(),
+                                          msg=f"orginal: {str(fail.exception)}")
 
     def test_no_substrings_present(self):
         subs = self.no_subs
+        not_in_count = len(subs)
+        subs_notin = [s.lower() for s in subs[-not_in_count:]]
 
-        with self.assertRaises(AssertionError) as failure:
-            self.assertSubstringsInString(substrings=subs, string=self.string)
+        # Test assert substrings IN string
+        with self.subTest(method=self.method_in.__name__):
+            with self.assertRaises(AssertionError) as fail:
+                self.method_in(substrings=subs, string=self.string)
+            # Assertion error message test: setup
+            err_msg_subs = subs_notin
+            err_msg_subs.extend(["0", f"{len(subs)}", "unexpectedly missing"])
+            # Assertion error message test
+            self.assertSubstringsInString(substrings=err_msg_subs,
+                                          string=str(fail.exception).lower(),
+                                          msg=f"orginal: {str(fail.exception)}")
 
-        err_msg_subs = ["0", "6", "unexpectly missing"] + subs[-3:]
-        self.assertSubstringsInString(substrings=err_msg_subs,
-                                      string=str(failure.exception).lower(),
-                                      msg=f"orginal: {str(failure.exception)}")
+        # Test assert substrings NOT IN string
+        with self.subTest(method=self.method_notin.__name__):
+            self.method_notin(substrings=subs, string=self.string)
 
     def test_empty_substrings(self):
         subs = []
 
         with self.assertRaises(ValueError):
-            self.assertSubstringsInString(substrings=subs, string=self.string)
+            self.method_in(substrings=subs, string=self.string)
+        with self.assertRaises(ValueError):
+            self.method_notin(substrings=subs, string=self.string)
 
     def test_string_not_list_as_substring(self):
         subs_present = "Lorem ipsum dolor"
         subs_absent = "This archaic concept"
 
-        self.assertSubstringsInString(substrings=subs_present,
-                                      string=self.string)
-        with self.assertRaises(AssertionError):
-            self.assertSubstringsInString(substrings=subs_absent,
-                                          string=self.string)
+        # Test assert substrings IN string
+        with self.subTest(method=self.method_in.__name__):
+            self.method_in(substrings=subs_present,
+                           string=self.string)
+            with self.assertRaises(AssertionError):
+                self.method_in(substrings=subs_absent,
+                               string=self.string)
+
+        # Test assert substrings NOT IN string
+        with self.subTest(method=self.method_notin.__name__):
+            self.method_notin(substrings=subs_absent,
+                              string=self.string)
+            with self.assertRaises(AssertionError):
+                self.method_notin(substrings=subs_present,
+                                  string=self.string)
 
     def test_empty_string(self):
         subs = self.some_overlap_subs
 
         with self.assertRaises(ValueError):
-            self.assertSubstringsInString(substrings=subs, string="")
+            self.method_in(substrings=subs, string="")
+        with self.assertRaises(ValueError):
+            self.method_notin(substrings=subs, string="")
 
 
 class Test_BaseTestCase_AssertMethods_Files(BaseTestCase):

@@ -47,6 +47,15 @@ class BaseTestCase(unittest.TestCase):
 
 
     def assertSubstringsInString(self, substrings, string, msg=None):
+        method = "IN"
+        self._SubstringsInString_base(substrings, string, method, msg=msg)
+
+    def assertSubstringsNotInString(self, substrings, string, msg=None):
+        method = "NOT IN"
+        self._SubstringsInString_base(substrings, string, method, msg=msg)
+
+    def _SubstringsInString_base(self, substrings, string, method, msg=None):
+
         # Precondition
         if isinstance(substrings, str):
             substrings = [substrings]  # Rather than raise a type error.
@@ -56,22 +65,33 @@ class BaseTestCase(unittest.TestCase):
         if not string:
             errmsg = f"Positional argument 2 is invalid: {repr(string)}"
             raise ValueError(errmsg)
+        methods = ("IN", "NOT IN")
+        if method not in methods:
+            raise ValueError(f"Method arg not valid: chose from {methods}.")
+
+        # Dependent setup:
+        def spaceing(n_spaces):
+            return "\n" + " " * n_spaces
+        if method == "IN":
+            line_0 = f"{len(substrings)} substrings were found in the string."
+            line_1 = f"{spaceing(4)}Unexpectedly missing:"
+            criteria_subs = [sub for sub in substrings if sub not in string]
+        else:
+            line_0 = f"{len(substrings)} substrings were absent from the string."
+            line_1 = f"{spaceing(4)}Unexpectedly present:"
+            criteria_subs = [sub for sub in substrings if sub in string]
+        # General setup:
+        count = len(criteria_subs)  # Expect zero to pass assertion
+
         # Main loop
-        absent = [sub for sub in substrings if sub not in string]
-        if len(absent) > 0:
-            # The assertion has failed: some/all substrings absent from string
-            def spaceing(n_spaces):
-                return "\n" + " " * n_spaces
-            detail = "".join([(spaceing(8) + "- " + s) for s in absent])
-            errmsg = (f"{len(substrings) - len(absent)} out of "
-                      f"{len(substrings)} substrings were found in the string."
-                      f"{spaceing(4)}Unexpectly missing:"
-                      f"{detail}")
+        if count > 0:
+            detail = "".join([(spaceing(8) + "- " + s) for s in criteria_subs])
+            errmsg = "".join([f"{len(substrings) - count} out of ",
+                              line_0, line_1, f"{detail}"])
             if msg:
                 errmsg = errmsg + f"{spaceing(4)}Custom message : {msg}"
             raise AssertionError(errmsg)
-        elif len(absent) == 0:
-            # The assertion has passed: all substrings in string
+        else:
             return
 
     def assertFileInDirectory(self, file, directory, msg=None):
