@@ -4,6 +4,7 @@
 
 classes:
     LogSuppressOrReraise    - decorator/context manager
+    LoggerWrapper
 
 functions:
     setup_logging
@@ -102,6 +103,39 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         return exc_type in self.suppress_exceptions
 
 
+class LoggerWrapper(py_logging.LoggerAdapter):
+
+    def __init__(self, logger):
+        extra = {}
+        super().__init__(logger, extra)
+
+    def __repr__(self):
+        clsname = f"Wrapped{self.logger.__class__.__name__}"
+        level = py_logging.getLevelName(self.logger.level)
+        return f"<{clsname} {self.logger.name} ({level})>"
+
+    @property
+    def level(self):
+        return self.logger.level
+
+    def autolog(self, source, level=None, **kwargs):
+        if isinstance(source, exceptions.RecomposeWarning):
+            self.warning(source, **kwargs)
+        elif isinstance(source, exceptions.RecomposeWarning):
+            self.error(source, **kwargs)
+        elif isinstance(source, Exception):
+            self.critical(source, **kwargs)
+        else:
+            if level is None:
+                self.log(self.logger.level, source, **kwargs)
+            else:
+                try:
+                    self.log(level, source, **kwargs)
+                except TypeError:
+                    logger_method = getattr(self.logger, level.lower())
+                    logger_method(source, **kwargs)
+
+
 def setup_logging(log_filename=None):
     """Setup the logging module using config file.
 
@@ -180,11 +214,14 @@ def finish_logging():
     return
 
 
-def getLogger(name=None):
+def getLogger(name=None, wrap=False):
     """Convenince function to get the default logger."""
     if name is None:
         name = "recomposeLogger"
-    return py_logging.getLogger(name)
+    logger = py_logging.getLogger(name)
+    if wrap:
+        logger = LoggerWrapper(logger)
+    return logger
 
 
 def default_log_filename():

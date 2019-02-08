@@ -13,8 +13,11 @@ import testfixtures
 
 import os
 import configparser
+import contextlib
 import unittest
 import tempfile
+import collections
+import random
 
 
 def tearDownModule():
@@ -305,6 +308,191 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         self.assertEqual(len(captured.records), 1)
         log_event = captured.records[0]
         self.assertEqual(log_event.levelname, level)
+
+
+class Test_LoggerWrapper(LoggingTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.message = f"Message from {cls.__class__.__name__}."
+        cls.default_log_filename = pkg_logging.default_log_filename()
+        cls.coded_levels = {"DEBUG": 10, "INFO": 20, "WARNING": 30,
+                            "ERROR": 40, "CRITICAL": 50}
+        cls.recorded_names = set()
+
+    def setUp(self):
+        while True:
+            unique_name = "loggerRandom#" + str(int(random.random() * 10e6))
+            if unique_name not in self.recorded_names:
+                self.recorded_names.add(unique_name)
+                break
+        self.random_name = unique_name
+
+    def tearDown(self):
+        if os.path.exists(self.default_log_filename):
+            os.remove(self.default_log_filename)
+
+    def test_wrapped_logger_has_original_logger(self):
+        import logging
+        logger = logging.getLogger()
+        logger_attr = "logger"
+
+        wrapped_logger = pkg_logging.LoggerWrapper(logger)
+
+        self.assertHasAttr(wrapped_logger, logger_attr)
+        self.assertIs(getattr(wrapped_logger, logger_attr), logger)
+
+    def test_wrapped_logger_shares_interface(self):
+        import logging
+        logger = logging.getLogger()
+        attrs = ("debug info warning error critical exception "
+                 "name level").split()
+
+        wrapped_logger = pkg_logging.LoggerWrapper(logger)
+
+        for attr in attrs:
+            with self.subTest(expected_attr=attr):
+                self.assertHasAttr(logger, attr, msg="Precondition!")
+                self.assertHasAttr(wrapped_logger, attr)
+
+    def test_wrapped_logger_logs(self):
+        import logging
+        logger = logging.getLogger()
+        levels = "DEBUG INFO WARNING ERROR CRITICAL".split()
+
+        wrapped_logger = pkg_logging.LoggerWrapper(logger)
+
+        for level in levels:
+            with self.subTest(level=level):
+                self.wrapped_logger_logs(wrapped_logger, level)
+
+    def test_wrapped_logger_logs_after_setup_by_level(self):
+        self.assertFalse(os.path.exists(self.default_log_filename),
+                         msg="Precondition.")
+
+        pkg_logging.setup_logging()
+        self.addCleanup(pkg_logging.finish_logging)
+        levels = "DEBUG INFO WARNING ERROR CRITICAL".split()
+
+        wrapped_logger = pkg_logging.getLogger(wrap=True)
+
+        for level in levels:
+            with self.subTest(level=level):
+                self.wrapped_logger_logs(wrapped_logger, level)
+
+    def test_wrapped_logger_logs_after_setup_to_destinations(self):
+        self.assertFalse(os.path.exists(self.default_log_filename),
+                         msg="Precondition.")
+        levels = "DEBUG INFO WARNING ERROR CRITICAL".split()
+
+        with testfixtures.OutputCapture(separate=True) as streams:
+            pkg_logging.setup_logging()
+            self.addCleanup(pkg_logging.finish_logging)
+
+            wrapped_logger = pkg_logging.getLogger(wrap=True)
+
+            for level in levels:
+                wrapped_logger.log(self.coded_levels[level], self.message)
+
+        with self.subTest(criteria="logs all levels to file"):
+            self.wrapped_logger_has_logged_to_file(levels)
+
+        with self.subTest(criteria="logs to stderr not stdout"):
+            stdout = streams.stdout.getvalue().strip()
+            stderr = streams.stderr.getvalue().strip()
+            self.assertEqual(len(stdout), 0)
+            self.assertGreaterEqual(len(stderr), 1)
+            self.assertIn(self.message, stderr)
+
+        with self.subTest(criteria="logs specific levels to stderr"):
+            expected_levels = "ERROR CRITICAL".split()
+            unexpected_levels = "DEBUG INFO WARNING ".split()
+            self.assertSubstringsInString(expected_levels, stderr)
+            self.assertSubstringsNotInString(unexpected_levels, stderr)
+
+
+    def test_wrapped_logger_autologs_exceptions_specially(self):
+        pkg_logging.setup_logging()
+        self.addCleanup(pkg_logging.finish_logging)
+        msg = self.message
+        errors = {"ERROR": exceptions.RecomposeError(msg),
+                  "WARNING": exceptions.RecomposeWarning(msg),
+                  "CRITICAL": Exception(msg)}
+
+        wrapped_logger = pkg_logging.getLogger(wrap=True)
+
+        for level, error in errors.items():
+            with self.subTest():
+                with self.assertLogs(wrapped_logger.logger, level):
+                    wrapped_logger.autolog(error)
+
+
+    def test_wrapped_logger_autologs_nonExceptions_with_logger_level(self):
+        expected_level = "WARNING"
+        import logging
+        logger = logging.getLogger(self.random_name)
+        logger.setLevel(expected_level)
+
+        wrapped_logger = pkg_logging.LoggerWrapper(logger)
+
+        self.assertEqual(wrapped_logger.level,
+                         self.coded_levels.get(expected_level),
+                         msg="Precondition")
+        with self.assertLogs(logger=wrapped_logger.logger, level=expected_level):
+            wrapped_logger.autolog(self.message)
+
+    def test_wrapped_logger_autologs_nonExceptions_with_specified_level(self):
+        expected_level = "DEBUG"
+        import logging
+        logger = logging.getLogger(self.random_name)
+
+        wrapped_logger = pkg_logging.LoggerWrapper(logger)
+
+        self.assertNotEqual(wrapped_logger.level,
+                            self.coded_levels.get(expected_level),
+                            msg="Precondition")
+        with self.assertLogs(logger=wrapped_logger.logger, level=expected_level):
+            wrapped_logger.autolog(self.message, level=expected_level)
+
+    def test_getLogger_returns_wrapped_logger(self):
+        import logging
+        pkg_logging.setup_logging()
+        self.addCleanup(pkg_logging.finish_logging)
+
+        logger = pkg_logging.getLogger(wrap=True)
+
+        self.assertIsInstance(logger, logging.LoggerAdapter)
+        self.assertIsInstance(logger, pkg_logging.LoggerWrapper)
+
+    def wrapped_logger_logs(self, logger, level):
+        message = self.message
+        encoded_level = self.coded_levels[level]
+        if encoded_level >= logger.level:
+            with self.assertLogs(logger.logger, level):
+                logger.log(encoded_level, message)
+        else:
+            try:
+                with self.assertLogs(logger.logger, level):
+                    logger.log(encoded_level, message)
+            except AssertionError:
+                assertmsg = ""
+            else:
+                assertmsg = (f"Logger '{logger}' should not have logged "
+                             "and yet it did.")
+            if assertmsg:
+                self.fail(assertmsg)
+
+    def wrapped_logger_has_logged_to_file(self, levels):
+        self.assertTrue(os.path.exists(self.default_log_filename),
+                        msg="Precondition")
+        with open(self.default_log_filename) as handle:
+            text = handle.read()
+        self.assertSubstringsInString(set(levels), text)
+        counter = collections.Counter(levels)
+        for level, expected_count in counter.items():
+            with self.subTest(counting_records=f"{level} -> {expected_count}"):
+                self.assertEqual(text.count(level), expected_count)
 
 
 class Test_Logging_Runtime_Behaviour(LoggingTestCase):
