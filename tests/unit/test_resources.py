@@ -29,7 +29,8 @@ class TestResourcesPresent(BaseTestCase):
                      "invlaid_input.xml",
                      "BR Autumn 2018.xml",
                      "BR Spring 2019 Track Changes.xml",
-                     "BR Autumn 2018 UTF8.txt"}
+                     "BR Autumn 2018 UTF8.txt",
+                     "BR Spring 2019 (final from ML).xml"}
         cls.dir = "./resources"
 
     def test_directory_present(self):

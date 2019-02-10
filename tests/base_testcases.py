@@ -157,8 +157,10 @@ class InputFileTestCase(BaseTestCase):
         cls.bad_input = "./resources/BR Autumn 2018.docx"
         cls.decoy_input = "./resources/invlaid_input.xml"
         cls.track_changes_input = "./resources/BR Spring 2019 Track Changes.xml"
+        cls.good_input_accepted_changes = "./resources/BR Spring 2019 (final from ML).xml"
         files = (cls.good_input, cls.bad_input,
-                 cls.decoy_input, cls.track_changes_input)
+                 cls.decoy_input, cls.track_changes_input,
+                 cls.good_input_accepted_changes)
         if not all(os.path.isfile(f) for f in files):
             raise FileNotFoundError("Missing file(s)!")
 
