@@ -7,13 +7,19 @@ Copyright: Ian Vermes 2019
 
 from tests.base_testcases import ParagraphsTestCase
 
+import helpers.logging as pkg_logging
 from helpers import paragraphs
+import helpers.paragraphs  # for tagetted mocking
 import exceptions
 
+import testfixtures
 from lxml import etree
 
+from unittest.mock import patch
+import random
 import unittest
 import itertools
+import os
 
 
 class Test_PreProcessed(ParagraphsTestCase):
@@ -380,6 +386,126 @@ class Test_PreProcessed(ParagraphsTestCase):
         """
         root = etree.fromstring(xml_str)
         return root
+
+@patch("helpers.paragraphs.PreProcessed.is_valid_italic_pattern")
+class Test_ProcessParagraphs_Function(ParagraphsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.preprocess_exc = exceptions.ParagraphItalicPatternWarning
+        cls.iter_paragraphs = list(cls.input.iter_paragraphs())
+        cls.default_log_filename = pkg_logging.default_log_filename()
+
+    def tearDown(self):
+        pkg_logging.finish_logging()
+        if os.path.exists(self.default_log_filename):
+            os.remove(self.default_log_filename)
+
+    def random_fail(self, *args, **kwargs):
+        fatal = kwargs["fatal"]
+        choice = random.choice([True, False])
+        return self._failing_func(choice, fatal)
+
+    def must_fail(self, *args, **kwargs):
+        fatal = kwargs["fatal"]
+        choice = False
+        return self._failing_func(choice, fatal)
+
+    def _failing_func(self, choice, fatal):
+        if choice:
+            return choice
+        else:
+            if fatal:
+                detail = "*** mocked detail ***".upper()
+                raise self.preprocess_exc(detail=detail)
+            else:
+                return choice
+
+    def test_mocked_PreProcessed_mock_sideffect1(self, mock_preprocessed_method=None):
+        mock_preprocessed_method.side_effect = self.random_fail
+        para_elements = self.iter_paragraphs
+
+        count = 0
+        exceptions = []
+        for para_elem in para_elements:
+            try:
+                helpers.paragraphs.PreProcessed(para_elem)
+            except self.preprocess_exc:
+                count += 1
+            except Exception as err:
+                exceptions.append(err.__class__.__name__)
+            else:
+                count += 1
+        self.assertFalse(len(exceptions), msg=", ".join(set(exceptions)))
+        self.assertEqual(len(para_elements), count)
+
+    def test_mocked_PreProcessed_mock_sideffect2(self, mock_preprocessed_method=None):
+        mock_preprocessed_method.side_effect = self.must_fail
+        para_elements = self.iter_paragraphs
+
+        err_count = 0
+        success_count = 0
+        exceptions = []
+        for para_elem in para_elements:
+            try:
+                helpers.paragraphs.PreProcessed(para_elem)
+            except self.preprocess_exc:
+                err_count += 1
+            except Exception as err:
+                exceptions.append(err.__class__.__name__)
+            else:
+                success_count += 1
+        self.assertFalse(len(exceptions), msg=", ".join(set(exceptions)))
+        self.assertEqual(err_count, len(para_elements))
+        self.assertEqual(success_count, 0)
+
+    def test_process_paragraphs_handles_warnings(self, mock_preprocessed_method):
+            mock_preprocessed_method.side_effect = self.must_fail
+            para_elements = self.iter_paragraphs
+            handled_exceptions = (exceptions.RecomposeWarning, )
+            pkg_logging.setup_logging()
+
+            isHandled = False
+            hasUnexpectedError = None
+
+            try:
+
+                helpers.paragraphs.process_paragraphs(para_elements)
+            except handled_exceptions:
+                isHandled = False
+            except Exception as err:
+                isHandled = False
+                hasUnexpectedError = err
+            else:
+                isHandled = True
+
+            self.assertIsNone(hasUnexpectedError)
+            self.assertTrue(isHandled,
+                            msg=(f"Exception of type {handled_exceptions} "
+                                 "should have been handled."))
+
+    def test_process_paragraphs_logs(self, mock_preprocessed_method):
+        mock_preprocessed_method.side_effect = self.must_fail
+        para_elements = self.iter_paragraphs
+        pkg_logging.setup_logging()
+
+        with self.subTest(logging="in general"):
+            pkg_logger = pkg_logging.getLogger()
+            with self.assertLogs(logger=pkg_logger.logger):
+                helpers.paragraphs.process_paragraphs(para_elements)
+
+        with self.subTest(logging="quantative"):
+            with testfixtures.OutputCapture() as stream:
+                helpers.paragraphs.process_paragraphs(para_elements)
+            stream_contents = stream.captured.strip()
+            with open(self.default_log_filename) as handle:
+                logfile_contents = handle.read().splitlines()
+
+            self.assertEqual(stream_contents, "")
+            self.assertLengthInRange(logfile_contents,
+                                     min=len(para_elements),
+                                     max=len(para_elements) + 1)
 
 
 if __name__ == '__main__':

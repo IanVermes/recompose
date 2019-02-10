@@ -10,6 +10,7 @@ Copyright: Ian Vermes 2019
 
 import exceptions
 from helpers import xml
+from helpers import logging as pkg_logging
 
 from lxml import etree
 
@@ -158,14 +159,8 @@ class PreProcessed(object):
         simple_pattern = tuple(cls._unique_justseen(pattern))
         is_valid = simple_pattern == cls._allowed_pattern
         if fatal and not is_valid:
-            try:
-                detail = format_detail(simple_pattern)
-                err = exceptions.ParagraphItalicPatternWarning(detail=detail)
-            except ValueError:
-                print(f"*** simple_pattern: {repr(simple_pattern)}")
-                print(f"*** pattern: {repr(pattern)}")
-                print(f"*** detail: {repr(detail)}")
-                raise
+            detail = format_detail(simple_pattern)
+            err = exceptions.ParagraphItalicPatternWarning(detail=detail)
             raise err
         else:
             return is_valid
@@ -202,3 +197,12 @@ class PreProcessed(object):
     @property
     def post_italic(self):
         return self.__post_italic.strip()
+
+
+def process_paragraphs(paragraph_elements):
+    for element in paragraph_elements:
+        try:
+            with pkg_logging.log_and_reraise():
+                pre = PreProcessed(element)
+        except exceptions.RecomposeWarning:
+            continue
