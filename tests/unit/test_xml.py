@@ -372,17 +372,8 @@ class Test_XMLAsInput_Suitablilty(InputFileTestCase):
                     with open(filename, "r") as handle:
 
                         result = func(handle)
-                    if os.path.basename(filename) == "valid_namespace_2.xml":
-                        specific_msg = """*** its a valid file that previously
-had trackchanges but they were accepted/rejected. The resultant file has a
-slightly different default namespace... infact it has 2 default namespaces but
-the first one is overwritten by the second one as they share the same prefix
-'None'
-"""
-                        self.assertEqual(expected, result, msg=specific_msg)
-                    else:
-                        self.assertEqual(expected, result)
 
+                    self.assertEqual(expected, result)
 
     def get_test_files(self, keyword):
         allowed_keys = {True, False}

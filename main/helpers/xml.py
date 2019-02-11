@@ -19,9 +19,14 @@ EXPECTED_PREFIXES = set(['xml', 'pkg', 'wps', 'wne', 'wpi', 'wpg', 'w15', 'w14',
                          'w', 'w10', 'wp', 'wp14', 'v', 'm', 'r', 'o', 'mv',
                          'mc', 'mo', 'wpc', 'a', 'sl', 'ds', 'xsi', 'dcmitype',
                          'dcterms', 'dc', 'cp', 'b', 'vt', None])
+
 SAMPLE_URIS = {"pkg": "http://schemas.microsoft.com/office/2006/xmlPackage",
-               "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
-               None: "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"}
+               "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+
+# None prefix values
+UNPREFIXED_URIS = {"http://schemas.openxmlformats.org/package/2006/relationships",
+                   "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties",
+                   "http://schemas.openxmlformats.org/officeDocument/2006/bibliography"}
 
 FIND_NAMESPACES_GET_PREFIX_URI = etree.XPath("//namespace::*")
 QUERY_TRACKCHANGES_BY_PREDICATE = "//w:p//*[w:ins or w:del or @w:author]"
@@ -229,11 +234,19 @@ class XMLAsInput(object):
         try:
             fileobject.seek(0, 0)
             tree = etree.parse(fileobject)
-            nsmap = {prefix: uri for prefix, uri in find_ns(tree)}
+
+            nsmap = {}  # Good files share prefixes and uris.
+            default_uris = set()
+            for prefix, uri in find_ns(tree):
+                if prefix is None:
+                    default_uris.add(uri)  # XML may multiple None prefixes
+                nsmap[prefix] = uri
             prefixes = set(nsmap)
+
             flag1 = prefixes == EXPECTED_PREFIXES
-            flag2 = all([(nsmap.get(pre, "") == uri) for pre, uri in SAMPLE_URIS.items()])
-            boolean = flag1 and flag2
+            flag2 = all([(nsmap.get(pre, "") == uri) for pre, uri in SAMPLE_URIS.items() if pre is not None])
+            flag3 = 1 < len(default_uris.intersection(UNPREFIXED_URIS)) <= 3
+            boolean = all([flag1, flag2, flag3])
         finally:
             fileobject.seek(0, 0)
         return boolean
