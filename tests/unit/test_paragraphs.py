@@ -5,7 +5,7 @@
 Copyright: Ian Vermes 2019
 """
 
-from tests.base_testcases import ParagraphsTestCase
+from tests.base_testcases import ParagraphsTestCase, BaseTestCase
 
 import helpers.logging as pkg_logging
 from helpers import paragraphs
@@ -20,6 +20,38 @@ import random
 import unittest
 import itertools
 import os
+
+
+class Test_Processor_Classes(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        PreProcessed_config = {"pre_italic": "Berthelot, Katell, Michaël Langlois and Thierry Legrand,",
+                               "italic": "La Bibliothèque de Qumran 3b: Torah Deutéronome et Pantateque dans son ensemble.",
+                               "post_italic": "Les Éditions du Cerf, Paris, 2017. xxi, 730 pp. €75.00. ISBN 978 2 20411 147 8."
+        }
+        cls.mock_config = PreProcessed_config
+        cls.patcher = patch("helpers.paragraphs.PreProcessed", autospec=True)
+        cls.MockPreProcessed = cls.patcher.start()
+
+        cls.processor_classes = {"Pre": paragraphs.ProcessorPreItalic,
+                                 "Post": paragraphs.ProcessorPostItalic,
+                                 "Italic": paragraphs.ProcessorItalic}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.patcher.stop()
+
+    def test_mocked_PreProcessed(self):
+        pre = self.MockPreProcessed("Some XML paragraph <w:p>")
+        pre.configure_mock(**self.mock_config)
+
+        for i, attr in enumerate(("pre_italic", "post_italic", "italic")):
+            with self.subTest(attr=attr):
+                self.assertHasAttr(pre, attr)
+                attr_value = getattr(pre, attr)
+                dict_value = self.mock_config[attr]
+                self.assertEqual(attr_value, dict_value)
 
 
 class Test_PreProcessed(ParagraphsTestCase):

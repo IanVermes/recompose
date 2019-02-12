@@ -209,6 +209,23 @@ class ParagraphsTestCase(InputFileTestCase):
             raise FileNotFoundError(cls.text_filename)
 
 
+class ExtractedParagraphs_General(BaseTestCase):  # Not TestCase
+
+    @classmethod
+    def setUpClass(cls):
+        cls._strings = {}
+        cls._str_files = {"pre": "resources/PreProcessed_preitalic.txt",
+                          "post": "resources/PreProcessed_postitalic.txt",
+                          "italic": "resources/PreProcessed_italic.txt"}
+        for key, filename in cls._str_files.items():
+            if os.path.exists(filename):
+                with open(filename) as handle:
+                    lines = [l.strip() for l in handle.readlines()]
+                    cls._strings[key] = lines
+            else:
+                raise FileNotFoundError(filename)
+
+
 class CommandLineTestCase(BaseTestCase):
 
     def invoke_cmd_via_commandline(self, cmd, expected_status, msg=None):
