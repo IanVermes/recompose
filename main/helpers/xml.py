@@ -8,12 +8,15 @@ XMLAsInput - class for verifying suitablity of an XML file for Recompose
 Copyright: Ian Vermes 2019
 """
 
+from helpers import logging as pkg_logging
 import exceptions
 
 from lxml import etree
 
 import os
 from collections import UserDict
+
+LOGGING_LEVEL = 20  # Log INFO or above
 
 EXPECTED_PREFIXES = set(['xml', 'pkg', 'wps', 'wne', 'wpi', 'wpg', 'w15', 'w14',
                          'w', 'w10', 'wp', 'wp14', 'v', 'm', 'r', 'o', 'mv',
@@ -140,6 +143,8 @@ class XMLAsInput(object):
 
     def __init__(self):
         super().__init__()
+        self.logger = pkg_logging.getLogger()
+        self.logger.setLevel(LOGGING_LEVEL)
         self.__suitable = False
         self.__has_trackchanges = False
         self.__tree = None
@@ -243,9 +248,13 @@ class XMLAsInput(object):
                 nsmap[prefix] = uri
             prefixes = set(nsmap)
 
-            flag1 = prefixes == EXPECTED_PREFIXES
+            flag1 =  prefixes == EXPECTED_PREFIXES
             flag2 = all([(nsmap.get(pre, "") == uri) for pre, uri in SAMPLE_URIS.items() if pre is not None])
             flag3 = 1 < len(default_uris.intersection(UNPREFIXED_URIS)) <= 3
+            self.logger.debug(f"namespace: flag1={flag1}, flag2={flag2}, flag3={flag3}")
+            if not flag1:
+                diff = prefixes.symmetric_difference(EXPECTED_PREFIXES)
+                self.logger.debug(f"symmetric_difference: {diff}")  # TODO {'ds', 'b'}
             boolean = all([flag1, flag2, flag3])
         finally:
             fileobject.seek(0, 0)
@@ -253,12 +262,16 @@ class XMLAsInput(object):
 
     def _battery_test(self, fileobject):
         boolean = self._sniff(fileobject)
+        self.logger.debug(f"sniff={boolean}")
         if boolean:
             boolean = self._parse(fileobject)
+        self.logger.debug(f"parse={boolean}")
         if boolean:
             boolean = self._trackchanges(fileobject)
+        self.logger.debug(f"trackchanges={boolean}")
         if boolean:
             boolean = self._namespace(fileobject)
+        self.logger.debug(f"namespace={boolean}")
         return boolean
 
     def __setup(self, filename):

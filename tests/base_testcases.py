@@ -9,6 +9,7 @@ Copyright: Ian Vermes 2019
 import tests.context
 
 import unittest
+import itertools
 import re
 import shlex
 import subprocess
@@ -192,24 +193,31 @@ class UnicodeItalicTestCase(BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.example = ("This fancy long sentence. Ålder Hünst-Køberg.\nNew "
-                       "paragragh \twith 'indentation'.")
         ascii_upper = (chr(i) for i in range(ord("A"), ord("Z") + 1))
         ascii_lower = (chr(i) for i in range(ord("a"), ord("z") + 1))
-        cls.only_ascii = "".join(ascii_upper) + "".join(ascii_lower)
+        ascii_digits = (chr(i) for i in range(ord("0"), ord("9") + 1))
+        cls.only_ascii_letters = "".join(itertools.chain(ascii_upper,
+                                                         ascii_lower))
+        cls.only_ascii_digits = "".join(ascii_digits)
+        cls.only_ascii = cls.only_ascii_letters + cls.only_ascii_digits
         cls.ascii_cat = set([unicodedata.category("A"),
-                            unicodedata.category("z")])
+                            unicodedata.category("a"),
+                            unicodedata.category("0")])
         cls.rgx_hex_code = re.compile(r"([\dA-Fa-f]{1,7}$)")
         cls.empty_box_chr = chr(9633)
-        cls.expected_length = 52
+        cls.expected_length_letters = 52
+        cls.expected_length_digits = 10
+        cls.expected_length = cls.expected_length_letters + cls.expected_length_digits
         cls.check_class_variable_precondtions()
 
     @classmethod
     def check_class_variable_precondtions(cls):
         assert len(cls.only_ascii) == cls.expected_length, "Precondition"
+        assert len(cls.only_ascii_letters) == cls.expected_length_letters, "Precondition"
+        assert len(cls.only_ascii_digits) == cls.expected_length_digits, "Precondition"
         for char in cls.only_ascii:
             cat = unicodedata.category(char)
-            assert cat in cls.ascii_cat, "Precondition"
+            assert cat in cls.ascii_cat, f"Precondition: {cat}"
 
         hexvalue = "123F"
         match = cls.rgx_hex_code.search(f"foobar {hexvalue}").group(1)

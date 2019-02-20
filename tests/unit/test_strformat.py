@@ -6,12 +6,22 @@ Copyright: Ian Vermes 2019
 """
 from tests.base_testcases import UnicodeItalicTestCase
 
+import unittest
 import helpers.strformat
 import unicodedata
 import re
 from functools import partial
 
 class Test_Italic_Func(UnicodeItalicTestCase):
+
+    @unittest.skip("Only run this test for visual inspection.")
+    def test_visually(self):
+        example = ("This fancy long sentence: Ålder Hünst-Køberg * # & 2."
+                   "\nNew paragraph has numbers 1234 56, and tabs\t. Hôlßås.")
+        result = helpers.strformat.makeItalic(example)
+        print(f"\noriginal: {repr(example)}")
+        print(f"\n  result: {repr(result)}")
+
 
     def test_changes_font(self):
         func = helpers.strformat.makeItalic
@@ -62,7 +72,7 @@ class Test_Italic_Func(UnicodeItalicTestCase):
                     self.assertEqual(new_char, char)
                     self.assertTrue(new_char.isprintable())
 
-    def test_numbers_preserved(self):
+    def test_numbers_are_converted(self):
             func = helpers.strformat.makeItalic
             chars = [str(i) for i in range(10)]
 
@@ -70,7 +80,7 @@ class Test_Italic_Func(UnicodeItalicTestCase):
                 with self.subTest(char=char):
                     new_char = func(char)
                     self.assertNotEqual(new_char, helpers.strformat.FILL_CHR)
-                    self.assertEqual(new_char, char)
+                    self.assertNotEqual(new_char, char)
                     self.assertTrue(new_char.isprintable())
 
     def test_whitespace_characters_substituted_with_viisble_alternatives(self):
@@ -100,9 +110,21 @@ class Test_Italic_Mapping(UnicodeItalicTestCase):
                 self.assertIn(font, name)
                 self.assertIn(expected, name)
 
-    def test_func_that_creates_mapping(self):
+    def test_global_for_font_NUM_points(self):
+        num_points = helpers.strformat._FONT_ZERO_POINTS
+        expected = "DIGIT ZERO"
+        for font, ord_ZERO in num_points.items():
+            with self.subTest(font=font):
+                italic_ZERO = chr(ord_ZERO)
+                self.assertTrue(italic_ZERO.isprintable())
+
+                name = unicodedata.name(italic_ZERO)
+                self.assertIn(font, name)
+                self.assertIn(expected, name)
+
+    def test_func_that_creates_letter_mapping(self):
         a_points = helpers.strformat._FONT_A_POINTS
-        func = helpers.strformat._get_italic_mapping
+        func = helpers.strformat._get_font_letters
 
         for font, ord_A in a_points:
             with self.subTest(font=font):
@@ -112,9 +134,28 @@ class Test_Italic_Mapping(UnicodeItalicTestCase):
                 except RuntimeError:
                     continue
 
-                self.assertSetEqual(set(self.only_ascii), set(mapping))
-                for chr_ascii, chr_italic in mapping.items():
-                    details = unicodedata.decomposition(chr_italic)
+                self.assertSetEqual(set(self.only_ascii_letters), set(mapping))
+                for chr_ascii, chr_font in mapping.items():
+                    details = unicodedata.decomposition(chr_font)
+                    hex_code = self.rgx_hex_code.search(details).group(1)
+                    ord_italic = int(hex_code, base=16)
+                    self.assertEqual(ord_italic, ord(chr_ascii))
+
+    def test_func_that_creates_digit_mapping(self):
+        num_points = helpers.strformat._FONT_ZERO_POINTS
+        func = helpers.strformat._get_font_digits
+
+        for font, ord_ZERO in num_points.items():
+            with self.subTest(font=font):
+
+                try:
+                    mapping = func(ord_ZERO)
+                except RuntimeError:
+                    continue
+
+                self.assertSetEqual(set(self.only_ascii_digits), set(mapping))
+                for chr_ascii, chr_font in mapping.items():
+                    details = unicodedata.decomposition(chr_font)
                     hex_code = self.rgx_hex_code.search(details).group(1)
                     ord_italic = int(hex_code, base=16)
                     self.assertEqual(ord_italic, ord(chr_ascii))
