@@ -1,30 +1,91 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
-"""Unit test of main/helpers/xml.py.
+"""Unit test of main/helpers/strformat.py.
 
 Copyright: Ian Vermes 2019
 """
-from tests.base_testcases import BaseTestCase
+from tests.base_testcases import UnicodeItalicTestCase
 
-from helpers import strformat
+import helpers.strformat
+import unicodedata
+import re
+from functools import partial
 
-STRING_NUMBERED = "The input file is not an XML of the correct type. You need to generate a suitable XML using Microsoft Word. 1) Open the 'Books Received' DOCX file in Microsoft Word, 2) in the menubar go to 'File'> 'Save As...' to open as dialog window, 3) choose the 'FileFormat' called 'Word XML Document (.xml)' from the spinner at the bottom of the dialog-window, 4) choose a suitable location to save the file, 5) click 'Save'.\nNow run this program again with the new XMLfile."
-STRING_BULLETED = "The input file is not an XML of the correct type. You need to generate a suitable XML using Microsoft Word. *) Open the 'Books Received' DOCX file in Microsoft Word, *) in the menubar go to 'File'> 'Save As...' to open as dialog window, *) choose the 'FileFormat' called 'Word XML Document (.xml)' from the spinner at the bottom of the dialog-window, *) choose a suitable location to save the file, *) click 'Save'.\nNow run this program again with the new XMLfile."
+class Test_Italic_Func(UnicodeItalicTestCase):
+
+    def test_changes_font(self):
+        func = helpers.strformat.makeItalic
+        result = func(self.only_ascii)
+        self.assertEqual(len(self.only_ascii), len(result), msg="Postcondition")
+        expected = "<font>"
+
+        for char in result:
+            details = unicodedata.decomposition(char)
+            cat = unicodedata.category(char)
+            self.assertIn(expected, details)
+            self.assertIn(cat, self.ascii_cat)
+            self.assertTrue(char.isprintable(), msg=repr(char))
+
+    def test_italic_characters_correspond_to_primitives(self):
+        func = helpers.strformat.makeItalic
+        result = func(self.only_ascii)
+        decompose = unicodedata.decomposition
+        hex2int = partial(int, base=16)
+
+        self.assertEqual(len(self.only_ascii), len(result), msg="Postcondition")
+        for char_o, char_res in zip(self.only_ascii, result):
+            primitive_value = self.rgx_hex_code.search(decompose(char_res))
+            primitive_value = primitive_value.group(1)
+            primitive_value = hex2int(primitive_value)
+            original_value = ord(char_o)
+            with self.subTest(map=f"{char_o} <-> {char_res}"):
+                self.assertEqual(primitive_value, original_value)
 
 
-class Test_Format_String(BaseTestCase):
+class Test_Italic_Mapping(UnicodeItalicTestCase):
 
-    def test_replace_bullets(self):
-        string = STRING_BULLETED
-        res = strformat.format_string(string, numbers=True, has_bullets=True, padding=False)
-        self.assertEqual(STRING_NUMBERED, res)
+    def test_global_for_font_A_points(self):
+        a_points = helpers.strformat._FONT_A_POINTS
+        expected = "CAPITAL A"
+        for font, ord_A in a_points:
+            with self.subTest(font=font):
+                italic_A = chr(ord_A)
+                self.assertTrue(italic_A.isprintable())
 
-    def test_replace_numbers(self):
-        string = STRING_NUMBERED
-        res = strformat.format_string(string, numbers=False, has_bullets=True, padding=False)
-        self.assertEqual(STRING_BULLETED, res)
+                name = unicodedata.name(italic_A)
+                self.assertIn(font, name)
+                self.assertIn(expected, name)
 
-    def test_replace_numbers_with_numbers(self):
-        string = STRING_NUMBERED
-        res = strformat.format_string(string, has_bullets=True, padding=False)
-        self.assertEqual(STRING_NUMBERED, res)
+    def test_func_that_creates_mapping(self):
+        a_points = helpers.strformat._FONT_A_POINTS
+        func = helpers.strformat._get_italic_mapping
+
+        for font, ord_A in a_points:
+            with self.subTest(font=font):
+
+                try:
+                    mapping = func(ord_A)
+                except RuntimeError:
+                    continue
+
+                self.assertSetEqual(set(self.only_ascii), set(mapping))
+                for chr_ascii, chr_italic in mapping.items():
+                    details = unicodedata.decomposition(chr_italic)
+                    hex_code = self.rgx_hex_code.search(details).group(1)
+                    ord_italic = int(hex_code, base=16)
+                    self.assertEqual(ord_italic, ord(chr_ascii))
+
+    def test_func_that_gets_available_mapping(self):
+        func = helpers.strformat._get_best_italic_mapping
+
+        mapping = func()
+
+        self.assertEqual(len(mapping), self.expected_length)
+        for ascii_chr, italic_chr in mapping.items():
+            with self.subTest(mapping=f"{ascii_chr} --> {italic_chr}"):
+                self.assertIsInstance(italic_chr, str)
+                self.assertEqual(len(italic_chr), 1)
+
+
+if __name__ == '__main__':
+    unittest.main()

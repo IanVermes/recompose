@@ -9,10 +9,12 @@ Copyright: Ian Vermes 2019
 import tests.context
 
 import unittest
+import re
 import shlex
 import subprocess
 import os
 import difflib
+import unicodedata
 
 # To allow consistent imports of pkg modules
 tests.context.main()
@@ -185,6 +187,33 @@ class LoggingTestCase(BaseTestCase):
 
     def tearDown(self):
         self.logging_builtin.shutdown()
+
+class UnicodeItalicTestCase(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.example = ("This fancy long sentence. Ålder Hünst-Køberg.\nNew "
+                       "paragragh \twith 'indentation'.")
+        ascii_upper = (chr(i) for i in range(ord("A"), ord("Z") + 1))
+        ascii_lower = (chr(i) for i in range(ord("a"), ord("z") + 1))
+        cls.only_ascii = "".join(ascii_upper) + "".join(ascii_lower)
+        cls.ascii_cat = set([unicodedata.category("A"),
+                            unicodedata.category("z")])
+        cls.rgx_hex_code = re.compile(r"([\dA-Fa-f]{1,7}$)")
+        cls.empty_box_chr = chr(9633)
+        cls.expected_length = 52
+        cls.check_class_variable_precondtions()
+
+    @classmethod
+    def check_class_variable_precondtions(cls):
+        assert len(cls.only_ascii) == cls.expected_length, "Precondition"
+        for char in cls.only_ascii:
+            cat = unicodedata.category(char)
+            assert cat in cls.ascii_cat, "Precondition"
+
+        hexvalue = "123F"
+        match = cls.rgx_hex_code.search(f"foobar {hexvalue}").group(1)
+        assert match == hexvalue, "Precondition"
 
 
 class InputFileTestCase(BaseTestCase):
