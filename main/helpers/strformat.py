@@ -10,19 +10,19 @@ import unicodedata
 
 
 def makeItalic(string):
-    # fill = chr(9633)  # Empty box.
+    fill = FILL_CHR  # Empty box.
 
     new_string = []
     for char in string:
         try:
             new_char = ITALIC_LETTER_MAP[char]
         except KeyError:
-            # if char in WHITESPACE_CHR_MAP:
-            #     new_char = WHITESPACE_CHR_MAP[char]
-            # elif unicodedata.category(char) in PUNCTUATION_CAT_SET:
-            #     new_char = char
-            # else:
-            new_char = fill
+            if char in WHITESPACE_CHR_MAP:
+                new_char = WHITESPACE_CHR_MAP[char]
+            elif unicodedata.category(char) in PUNCTUATION_CAT_SET:
+                new_char = char
+            else:
+                new_char = fill
         new_string.append(new_char)
     new_string = "".join(new_string)
     return new_string
@@ -63,6 +63,8 @@ _FONT_A_POINTS = [("MATHEMATICAL ITALIC", 119860),
                   ("MATHEMATICAL SANS-SERIF ITALIC", 120328),
                   ("MATHEMATICAL SANS-SERIF BOLD ITALIC", 120380)]
 
-_FILL_CHR = chr(9633)  # Empty Box
+FILL_CHR = chr(9633)  # Empty Box
 
 ITALIC_LETTER_MAP = _get_best_italic_mapping()
+WHITESPACE_CHR_MAP = {" ": chr(183), "\n": chr(182), "\t": chr(8677)}
+PUNCTUATION_CAT_SET = set("Pc Pd Pe Pf Pi Po Ps Sk".split())

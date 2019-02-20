@@ -41,6 +41,50 @@ class Test_Italic_Func(UnicodeItalicTestCase):
             with self.subTest(map=f"{char_o} <-> {char_res}"):
                 self.assertEqual(primitive_value, original_value)
 
+    def test_accented_characters_replaced_by_fill_when_unavailable(self):
+        func = helpers.strformat.makeItalic
+        chars = "å Ë ü".split()
+
+        for char in chars:
+            with self.subTest(char=char):
+                new_char = func(char)
+                self.assertEqual(new_char, helpers.strformat.FILL_CHR)
+                self.assertTrue(new_char.isprintable())
+
+    def test_punctuation_characters_preserved(self):
+            func = helpers.strformat.makeItalic
+            chars = "; . : ' & ^ * ( ) ? ! \" / \\".split()
+
+            for char in chars:
+                with self.subTest(char=char):
+                    new_char = func(char)
+                    self.assertNotEqual(new_char, helpers.strformat.FILL_CHR)
+                    self.assertEqual(new_char, char)
+                    self.assertTrue(new_char.isprintable())
+
+    def test_numbers_preserved(self):
+            func = helpers.strformat.makeItalic
+            chars = [str(i) for i in range(10)]
+
+            for char in chars:
+                with self.subTest(char=char):
+                    new_char = func(char)
+                    self.assertNotEqual(new_char, helpers.strformat.FILL_CHR)
+                    self.assertEqual(new_char, char)
+                    self.assertTrue(new_char.isprintable())
+
+    def test_whitespace_characters_substituted_with_viisble_alternatives(self):
+        func = helpers.strformat.makeItalic
+        chars = " ", "\n", "\t"
+        mapping = helpers.strformat.WHITESPACE_CHR_MAP
+
+        for char in chars:
+            with self.subTest(char=char):
+                new_char = func(char)
+                self.assertNotEqual(new_char, helpers.strformat.FILL_CHR)
+                self.assertNotEqual(new_char, char)
+                self.assertEqual(mapping[char], new_char)
+                self.assertTrue(new_char.isprintable())
 
 class Test_Italic_Mapping(UnicodeItalicTestCase):
 
