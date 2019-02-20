@@ -33,8 +33,25 @@ class BaseTestCase(unittest.TestCase):
         if max < min:
             errmsg = f"max cannot be less than min({min}), got {max}."
             raise ValueError(errmsg)
-        self.assertLessEqual(length, max, msg=f"Too long!{usermsg}")
-        self.assertGreaterEqual(length, min, msg=f"Too short!{usermsg}")
+        # Check above upper bound
+        if length > max:
+            too_long = (f" * Too long! Upper limit={max}.")
+        else:
+            too_long = ""
+        # Check below lower bound
+        if length < min:
+            too_short = (f" * Too short! Lower limit={min}.")
+        else:
+            too_short = ""
+        if too_long or too_short:
+            strings = [too_long, too_short]
+            detail = "\n".join(filter(lambda x: bool(x), strings))
+            assertmsg = f"Arg has length={length} and is outside of limits:\n"
+            assertmsg += detail
+            assertmsg += usermsg
+            raise AssertionError(assertmsg)
+        else:
+            return
 
     def assertHasAttr(self, obj, attr, msg=None):
         if hasattr(obj, attr):
