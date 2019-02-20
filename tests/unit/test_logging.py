@@ -190,8 +190,8 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         def example_func():
             raise expected_exception("generic message")
 
-        with self.assertRaises(expected_exception):
-            with self.assertLogs():
+        with self.assertLogs():
+            with self.assertRaises(expected_exception):
                 example_func()
 
     def test_decorator_also_is_context_manager(self):
@@ -200,12 +200,60 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
 
         def undecorated_func():
             raise expected_exception("generic message")
-            with self.assertRaises(expected_exception):
-                with self.assertLogs():
 
+        with self.assertLogs():
+            with self.assertRaises(expected_exception):
+                # Actual operation
+                with decorator_cm():
+                        undecorated_func()
+
+    def test_decorator_takes_a_prelogger_kwarg(self):
+        decorator_cm = pkg_logging.log_and_reraise
+        expected_exception = ValueError
+
+        def undecorated_func():
+            raise expected_exception("generic message")
+
+        prelogger_str = "This message before a Critical"
+        def prelogger_func():
+            return "This message (derived from a callable) before a Critical."
+
+        # Test prelog as a str
+        with self.subTest(prelogger="is string"):
+            with self.assertLogs():
+                with self.assertRaises(expected_exception):
                     # Actual operation
-                    with decorator_cm():
-                            undecorated_func()
+                    with decorator_cm(prelog=prelogger_str):
+                        undecorated_func()
+        # Test prelog as a callable
+        with self.subTest(prelogger="is func"):
+            with self.assertLogs():
+                with self.assertRaises(expected_exception):
+                    # Actual operation
+                    with decorator_cm(prelog=prelogger_func):
+                        undecorated_func()
+
+    def test_decorator_prelogger_logs_before_expected_log_record(self):
+        decorator_cm = pkg_logging.log_and_reraise
+        expected_exception = ValueError
+        expected_exception_str = "generic message"
+
+        def undecorated_func():
+            raise expected_exception(expected_exception_str)
+
+        prelogger_str = "This message before a Critical"
+
+        with self.assertLogs() as captured:
+            with self.assertRaises(expected_exception):
+                # Actual operation
+                with decorator_cm(prelog=prelogger_str):
+                    undecorated_func()
+            self.assertEqual(len(captured.output), 2)
+            line_0, line_1 = captured.output
+            self.assertIn(prelogger_str, line_0)
+            self.assertIn(expected_exception_str, line_1)
+
+
 
     def test_decorator_can_suppress_specified_exceptions(self):
         decorator_cm = pkg_logging.log_suppress_or_reraise
@@ -252,15 +300,15 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
             raise unexpected_exc("generic message")
 
         with self.subTest(implementation="context manager"):
-            with self.assertRaises(unexpected_exc):
-                with self.assertLogs():
-                    with decorator_cm(to_suppress):
-                        undecorated_func()
+            with self.assertLogs():
+                with self.assertRaises(unexpected_exc):
+                        with decorator_cm(to_suppress):
+                            undecorated_func()
 
         with self.subTest(implementation="decorator"):
-            with self.assertRaises(unexpected_exc):
-                with self.assertLogs():
-                    decorated_func()
+            with self.assertLogs():
+                with self.assertRaises(unexpected_exc):
+                        decorated_func()
 
     def test_decorator_logs_package_exceptions_as_errors(self):
         decorator = pkg_logging.log_and_reraise
@@ -302,8 +350,8 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
                              exception_type=expected_exception)
 
     def check_decorator(self, func=None, level=None, exception_type=None):
-        with self.assertRaises(exception_type):
-            with self.assertLogs() as captured:
+        with self.assertLogs() as captured:
+            with self.assertRaises(exception_type):
                 func()
         self.assertEqual(len(captured.records), 1)
         log_event = captured.records[0]

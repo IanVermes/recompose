@@ -46,16 +46,20 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         logger(str, logging.Logger): The name of a logger or logger object.
                     By default, uses the module logger if available otherwise
                     the package logger.
+        prelog(str, callable): Before the exception is logged, log some extra
+                    information. This could a string or a callable. Expensive
+                    or dynamic strings could be curried into a function.
     Exceptions:
         TypeError
     """
 
     _DEBUG = False
 
-    def __init__(self, *exceptions, logger=None):
+    def __init__(self, *exceptions, logger=None, prelog=None):
         super().__init__()
         self.suppress_exceptions = set(self._flatten(*exceptions))
         self._assign_logger(logger)
+        self._prelog = prelog
 
     def _assign_logger(self, logger=None):
         if self._DEBUG:
@@ -83,7 +87,35 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         if not exc:
             return
         else:
+            self._log_prelog_object()
             self.logger.autolog(exc)
+
+    def _log_prelog_object(self, level=None):
+        if self._prelog is None or not self._prelog:
+            return
+        else:
+            autolog_kwargs = {}
+            if level is None:
+                autolog_kwargs["level"] = self.logger.level
+                print(f"\n*** def _log_prelog_object: (self.logger.level: {self.logger.level}")
+            else:
+                autolog_kwargs["level"] = level
+            try:
+                autolog_kwargs["source"] = self._prelog()
+            except TypeError:
+                if isinstance(self._prelog, str):
+                    autolog_kwargs["source"] = self._prelog
+                elif isinstance(self._prelog, (list, tuple)):
+                    autolog_kwargs["source"] = self._prelog[0]
+                    autolog_kwargs["level"] = self._prelog[1]
+                else:
+                    raise
+            if not isinstance(autolog_kwargs["source"], str):
+                msg = ("Expected prelog to be a string returning callable"
+                       f"or a string not {type(self._prelog)}.")
+                raise TypeError(msg)
+            else:
+                self.logger.autolog(**autolog_kwargs)
 
     @classmethod
     def _flatten(cls, *args):
@@ -220,21 +252,21 @@ def setup_logging(log_filename=None):
     return
 
 
-def log_and_reraise(logger=None):
+def log_and_reraise(logger=None, prelog=None, **kwargs):
     """Context manager or decorator - logs & raises exceptions.
 
     Convenince function to support older implementation.
     """
     exceptions = []
-    return LogSuppressOrReraise(*exceptions, logger=logger)
+    return LogSuppressOrReraise(*exceptions, logger=logger, prelog=prelog, **kwargs)
 
 
-def log_suppress_or_reraise(*exceptions, logger=None):
+def log_suppress_or_reraise(*exceptions, logger=None, prelog=None, **kwargs):
     """Context manager or decorator - logs, raises and can suppress exceptions.
 
     Convenince function to support older implementation.
     """
-    return LogSuppressOrReraise(*exceptions, logger=logger)
+    return LogSuppressOrReraise(*exceptions, logger=logger, prelog=prelog, **kwargs)
 
 
 def finish_logging():
