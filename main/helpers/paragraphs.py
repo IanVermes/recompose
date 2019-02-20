@@ -21,6 +21,7 @@ from lxml import etree
 import itertools
 import operator
 import textwrap
+from functools import partial
 
 
 class PreProcessed(object):
@@ -205,12 +206,20 @@ class PreProcessed(object):
 
 
 def process_paragraphs(paragraph_elements):
-    for element in paragraph_elements:
+    logger = pkg_logging.getLogger()
+    prelog_len = 30
+    for i, element in enumerate(paragraph_elements, start=1):
+        prelog = partial(get_paragraph_head, element, prelog_len, bullet_num=i)
         try:
-            with pkg_logging.log_and_reraise():
+            with pkg_logging.log_and_reraise(logger, prelog=prelog):
                 pre = PreProcessed(element)
         except exceptions.RecomposeWarning:
             continue
+        else:
+            pass
+
+
+
 def get_paragraph_head(source, maxlength, bullet_num=-1, bullet=False):
     """Return the paragraph text of specific length, optionally prefix a bullet.
 

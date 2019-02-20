@@ -18,6 +18,7 @@ from lxml import etree
 from unittest.mock import patch
 import random
 import unittest
+import functools
 import itertools
 import os
 
@@ -481,6 +482,34 @@ class Test_Paragraph_ShorteningFunc(ParagraphsTestCase):
         result = func(string, desired_length)
 
         self.assertIn(ellipsis, result)
+        self.assertTrue(result.endswith(ellipsis))
+
+    def test_func_wrapped_as_partial(self):
+        desired_length = 30
+        bullet_number = 7
+        expected_bullet = f"{bullet_number:02d})"
+        ellipsis = "..."
+        string = ("Lorem ipsum dolor sit amet, consectetur adipisicing elit, "
+                  "sed do eiusmod tempor incididunt")
+        self.assertGreater(len(string), desired_length, msg="Precondition")
+
+        func = helpers.paragraphs.get_paragraph_head
+        curried_func = functools.partial(func, string, desired_length,
+                                         bullet_num=bullet_number)
+        # Curried is callable?
+        try:
+            result = curried_func()
+        except TypeError as err:
+            error = err
+        else:
+            error = None
+
+        # Curried result is as expected
+        self.assertIsNone(error)
+        self.assertIsInstance(result, str)
+        self.assertLengthInRange(result, min=1, max=desired_length)
+        self.assertTrue(result.startswith(expected_bullet))
+        self.assertTrue(result.endswith(ellipsis))
 
 
 @patch("helpers.paragraphs.PreProcessed.is_valid_italic_pattern")
@@ -602,14 +631,20 @@ class Test_ProcessParagraphs_Function(ParagraphsTestCase):
 
             # Test logging to stdout/stderr: expect nothing
             self.assertEqual(stream_contents, "")
-            # Test logging to logfile: expect things
-            self.assertLengthInRange(logfile_contents,
+            # Test logging to logfile: expect n warning lines
+            filtered_contents = [l for l in logfile_contents if "WARNING" in l]
+            self.assertLengthInRange(filtered_contents,
                                      min=len(para_elements),
                                      max=len(para_elements) + 1)
+            # Test logging to logfile: expect things - prelog + warning
+            self.assertLengthInRange(logfile_contents,
+                                     min=len(para_elements) * 2,
+                                     max=len(para_elements) * 2 + 1)
 
     def test_process_paragraphs_log_messages_as_expected(self, mock_preprocessed_method):
         mock_preprocessed_method.side_effect = self.must_fail
         para_elems_zerothonly = list(itertools.islice(self.iter_paragraphs, 1))
+        para = para_elems_zerothonly[0]
 
         helpers.paragraphs.process_paragraphs(para_elems_zerothonly)
 
@@ -619,12 +654,21 @@ class Test_ProcessParagraphs_Function(ParagraphsTestCase):
         self.assertLengthInRange(logfile_contents, min=2, max=2)
         line_0, line_1 = logfile_contents
         with self.subTest(line="prelog line"):
-            detail = para_elems_zerothonly[0].xpath("string()")[:30]
-            expected = [detail, "0"]
+            level = "INFO"
+            max_length = 30
+            raw_detail = para.xpath("string()")[:max_length]
+            func = helpers.paragraphs.get_paragraph_head
+            expected_detail = func(para, max_length, bullet_num=1)
+            expected = [expected_detail, level]
+
             self.assertSubstringsInString(expected, line_0,
                                           msg=f"line='{line_0}'")
+            self.assertStringsSimilar(raw_detail, expected_detail, 0.5)
+            line_0_substring = line_0.split(level)[1]
+            self.assertStringsSimilar(raw_detail, line_0_substring, 0.3)
         with self.subTest(line="error line"):
-            expected = [self.error_mock_detail, "WARNING", "italic"]
+            level = "WARNING"
+            expected = [self.error_mock_detail, level, "italic"]
             self.assertSubstringsInString(expected, line_1,
                                             msg=f"line='{line_1}'")
 
