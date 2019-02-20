@@ -222,7 +222,8 @@ class Test_PreProcessed(ParagraphsTestCase):
 
     def test_validate_method_passes_correct_italic_pattern(self):
         funcs = [self.italic_correct_sequence,
-                 self.italic_correct_sequence_with_small_caps]
+                 self.italic_correct_sequence_with_small_caps,
+                 self.italic_correct_sequence_longer]
         method = paragraphs.PreProcessed._is_valid_italic_pattern
         funcs = {f: f.__name__ for f in funcs}
 
@@ -235,7 +236,7 @@ class Test_PreProcessed(ParagraphsTestCase):
 
     def test_validate_method_fails_incorrect_italic_patterns(self):
         funcs = [self.italic_interrupted_sequence_raises,
-                 self.italic_interrupted_sequence_raises,
+                 self.italic_interrupted_sequence_longer_raises,
                  self.italic_inverted_sequence_raises,
                  self.italic_NO_PRE_sequence_raises,
                  self.italic_NO_POST_sequence_raises,
@@ -260,15 +261,23 @@ class Test_PreProcessed(ParagraphsTestCase):
                 self.assertFalse(flag)
 
     def test_validate_method_raises_exception_with_detail(self):
-        xml = self.italic_inverted_sequence_raises()
+        funcs = [self.italic_inverted_sequence_raises,
+                 self.italic_interrupted_sequence_longer_raises]
+        funcs = {f: f.__name__ for f in funcs}
+        expected_detail = "italic, non-italic, italic"
         method = paragraphs.PreProcessed._is_valid_italic_pattern
         expected_exception = exceptions.ParagraphItalicPatternWarning
-        expected_detail = "italic, non-italic, italic"
 
-        with self.assertRaises(expected_exception) as fail:
-            method(xml, fatal=True, _memoize=False)
+        for xml_func, name in funcs.items():
+            xml = xml_func()
+            with self.subTest(xml_type=name, fatal=True):
+                with self.assertRaises(expected_exception) as fail:
+                    method(xml, fatal=True, _memoize=False)
 
-        self.assertIn(expected_detail, str(fail.exception))
+                self.assertIn(expected_detail, str(fail.exception))
+
+    def test_validate_method_exception_detail_includes_offending_text(self):
+        self.fail("not written")
 
     def test_identify_substrings_method(self):
         xml = self.italic_correct_sequence()
@@ -315,6 +324,44 @@ class Test_PreProcessed(ParagraphsTestCase):
         root = etree.fromstring(xml_str)
         return root
 
+    def italic_correct_sequence_longer(self):
+        xml_str = """<w:p xmlns:w="http://google.com">
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 3</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>Italic Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>Italic Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 3</w:t>
+        </w:r></w:p>
+        """
+        root = etree.fromstring(xml_str)
+        return root
+
     def italic_correct_sequence_with_small_caps(self):
         xml_str = """<w:p xmlns:w="http://google.com">
         <w:r>
@@ -355,6 +402,60 @@ class Test_PreProcessed(ParagraphsTestCase):
         <w:r>
             <w:rPr></w:rPr>
             <w:t>Post Text</w:t>
+        </w:r></w:p>
+        """
+        root = etree.fromstring(xml_str)
+        return root
+
+    def italic_interrupted_sequence_longer_raises(self):
+        xml_str = """<w:p xmlns:w="http://google.com">
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 3</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>First Italic Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>First Italic Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Interupted Not Italic 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Interupted Not Italic 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>Second Italic Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>Second Italic Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>Second Italic Text 3</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 2</w:t>
         </w:r></w:p>
         """
         root = etree.fromstring(xml_str)
