@@ -13,6 +13,63 @@ import tempfile
 import unittest
 import os
 
+
+class Test_BaseTestCase_AssertMethods_StringsSimilar(BaseTestCase):
+
+    def test_assertion_method(self):
+        method = self.assertStringsSimilar
+        string_a = "x" * 40
+        string_b_5050 = "x" * 20 + "y" * 20
+        string_b_2575 = "x" * 10 + "y" * 30
+        string_b_zero = "y" * 40
+        b_data = {string_a: (1.0, "a vs a ratio: {mod_ratio:.2f}"),
+                  string_b_5050: (0.5, "a vs b_5050 ratio: {mod_ratio:.2f}"),
+                  string_b_2575: (0.25, "a vs b_2575 ratio: {mod_ratio:.2f}"),
+                  string_b_zero: (0.0, "a vs b_zero ratio: {mod_ratio:.2f}")}
+
+        for b, (exp_ratio, usage) in b_data.items():
+            for modify in (0.0, 0.01, -0.01):
+                mod_ratio = exp_ratio + modify
+                with self.subTest(usage=usage.format(mod_ratio=mod_ratio)):
+                    delta = abs(mod_ratio - exp_ratio)
+                    delta_threshold = 0.00001
+                    # If mod_ratio ~ exp_ratio: No Assertio
+                    # If mod_ratio is greater than exp_ratio: Assert
+                    # If mod_ratio is less than exp_ratio: No Assertion
+                    try:
+                        if delta < delta_threshold:
+                            method(string_a, b, mod_ratio)
+                        elif mod_ratio > exp_ratio:
+                            with self.assertRaises(AssertionError):
+                                method(string_a, b, mod_ratio)
+                        else:
+                            method(string_a, b, mod_ratio)
+                    except ValueError:
+                        pass  # Ignore OOB ratio related errors
+
+    def test_assertion_preconditions(self):
+        method = self.assertStringsSimilar
+        string_a = "x" * 40
+        string_b = "x" * 20 + "y" * 20
+        # Ratio is out of bounds
+        for oob in [1.1, -0.1]:
+            with self.subTest(usage=f"Out of bound ratio: {oob}"):
+                with self.assertRaises(ValueError):
+                    method(string_a, string_b, oob)
+        # Allow integers
+        for int_ratio in [1, 0]:
+            with self.subTest(usage=f"Ratio is int not float: {int_ratio}"):
+                try:
+                    method(string_a, string_b, int_ratio)
+                except AssertionError:
+                    pass  # Ignore method main functionality
+        # Forbid non-strings
+        string_c = "12345"
+        string_d = 12345
+        with self.subTest(usage="bad types"):
+            with self.assertRaises(TypeError):
+                method(string_c, string_d, 1.0)
+
 class Test_BaseTestCase_AssertMethods_LengthInRange(BaseTestCase):
 
     def test_assertion_method(self):

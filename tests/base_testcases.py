@@ -12,6 +12,7 @@ import unittest
 import shlex
 import subprocess
 import os
+import difflib
 
 # To allow consistent imports of pkg modules
 tests.context.main()
@@ -19,6 +20,29 @@ tests.context.main()
 
 class BaseTestCase(unittest.TestCase):
     """Base testcase for the suite."""
+
+    def assertStringsSimilar(self, a, b, ratio, msg=None):
+        for i, arg in enumerate([a, b], start=1):
+            if not isinstance(arg, str):
+                msg = f"arg{i}:{arg} is {type(arg)} and not string."
+                raise TypeError(msg)
+        threshold = float(ratio)
+        if threshold > 1.0 or threshold < 0.0:
+            msg = (f"Ratio: {threshold:.3f} is not a value beween 0 and 1 "
+                   "inclusive.")
+            raise ValueError(msg)
+        # Main
+        comparison = difflib.SequenceMatcher(None, a, b)
+        calc_ratio = comparison.ratio()
+        if calc_ratio < threshold:
+            assertmsg = (f"String a and b similarity is {calc_ratio:.3f} "
+                         f"which is below the threshold of {threshold:.3f}.")
+            if msg is not None:
+                assertmsg += msg
+            raise AssertionError(assertmsg)
+        else:
+            return
+
 
     def assertLengthInRange(self, source, min, max, msg=None):
         try:
