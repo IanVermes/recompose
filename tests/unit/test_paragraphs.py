@@ -419,6 +419,70 @@ class Test_PreProcessed(ParagraphsTestCase):
         root = etree.fromstring(xml_str)
         return root
 
+
+class Test_Paragraph_ShorteningFunc(ParagraphsTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        paras_xml = list(cls.input.iter_paragraphs())[:5]
+        paras_preproc = list(map(helpers.paragraphs.PreProcessed, paras_xml))
+        cls.args = ["Lorem ipsum dolor sit amet, consectetur adipisicing elit"]
+        cls.args.extend(paras_xml)
+        cls.args.extend(paras_preproc)
+
+    def test_func_with_different_args(self):
+        length = 30
+        func = helpers.paragraphs.get_paragraph_head
+        for arg in self.args:
+
+            with self.subTest(type=type(arg)):
+                result = func(arg, length)
+                self.assertIsInstance(result, str)
+
+    def test_func_shortens_string(self):
+        desired_length = 30
+        func = helpers.paragraphs.get_paragraph_head
+
+        for arg in self.args:
+
+            with self.subTest(type=type(arg)):
+                result = func(arg, desired_length)
+
+                self.assertLengthInRange(result,
+                                         min=1,
+                                         max=desired_length)
+
+    def test_func_kwargs_bullet(self):
+        func = helpers.paragraphs.get_paragraph_head
+        desired_length = 30
+        expected_bullet_star = "* )"
+        expected_bullet_number = "{i:02d})"
+        for i, arg in enumerate(self.args):
+
+            with self.subTest(type=type(arg), bullet="*"):
+                result = func(arg, desired_length, bullet=True)
+                self.assertIn(expected_bullet_star, result)
+
+            with self.subTest(type=type(arg), bullet="int"):
+                result = func(arg, desired_length, bullet_num=i)
+
+                self.assertIn(str(i), result)
+                self.assertIn(expected_bullet_number.format(i=i), result)
+
+    def test_adds_ellipsis(self):
+        desired_length = 30
+        string = ("Lorem ipsum dolor sit amet, consectetur adipisicing elit, "
+                  "sed do eiusmod tempor incididunt")
+        ellipsis = "..."
+        func = helpers.paragraphs.get_paragraph_head
+        self.assertGreater(len(string), desired_length, msg="Precondition")
+
+        result = func(string, desired_length)
+
+        self.assertIn(ellipsis, result)
+
+
 @patch("helpers.paragraphs.PreProcessed.is_valid_italic_pattern")
 class Test_ProcessParagraphs_Function(ParagraphsTestCase):
 
@@ -428,6 +492,7 @@ class Test_ProcessParagraphs_Function(ParagraphsTestCase):
         cls.preprocess_exc = exceptions.ParagraphItalicPatternWarning
         cls.iter_paragraphs = list(cls.input.iter_paragraphs())
         cls.default_log_filename = pkg_logging.default_log_filename()
+        cls.error_mock_detail = "*** mocked detail ***".upper()
 
     def tearDown(self):
         pkg_logging.finish_logging()
@@ -449,7 +514,7 @@ class Test_ProcessParagraphs_Function(ParagraphsTestCase):
             return choice
         else:
             if fatal:
-                detail = "*** mocked detail ***".upper()
+                detail = self.error_mock_detail
                 raise self.preprocess_exc(detail=detail)
             else:
                 return choice
@@ -528,16 +593,40 @@ class Test_ProcessParagraphs_Function(ParagraphsTestCase):
                 helpers.paragraphs.process_paragraphs(para_elements)
 
         with self.subTest(logging="quantative"):
+            # Capture logging to stream and file
             with testfixtures.OutputCapture() as stream:
                 helpers.paragraphs.process_paragraphs(para_elements)
             stream_contents = stream.captured.strip()
             with open(self.default_log_filename) as handle:
                 logfile_contents = handle.read().splitlines()
 
+            # Test logging to stdout/stderr: expect nothing
             self.assertEqual(stream_contents, "")
+            # Test logging to logfile: expect things
             self.assertLengthInRange(logfile_contents,
                                      min=len(para_elements),
                                      max=len(para_elements) + 1)
+
+    def test_process_paragraphs_log_messages_as_expected(self, mock_preprocessed_method):
+        mock_preprocessed_method.side_effect = self.must_fail
+        para_elems_zerothonly = list(itertools.islice(self.iter_paragraphs, 1))
+
+        helpers.paragraphs.process_paragraphs(para_elems_zerothonly)
+
+        with open(self.default_log_filename) as handle:
+            logfile_contents = handle.read().splitlines()
+
+        self.assertLengthInRange(logfile_contents, min=2, max=2)
+        line_0, line_1 = logfile_contents
+        with self.subTest(line="prelog line"):
+            detail = para_elems_zerothonly[0].xpath("string()")[:30]
+            expected = [detail, "0"]
+            self.assertSubstringsInString(expected, line_0,
+                                          msg=f"line='{line_0}'")
+        with self.subTest(line="error line"):
+            expected = [self.error_mock_detail, "WARNING", "italic"]
+            self.assertSubstringsInString(expected, line_1,
+                                            msg=f"line='{line_1}'")
 
 
 if __name__ == '__main__':

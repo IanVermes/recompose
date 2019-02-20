@@ -5,6 +5,10 @@
 PreProcessed - class that converts a paragraph element into 3 major substrings.
 PostProcessed - class that validates and extracts data from a preprocessed obj.
 
+Other classes/funcs:
+    get_paragraph_head
+    process_paragraphs
+
 Copyright: Ian Vermes 2019
 """
 
@@ -16,6 +20,7 @@ from lxml import etree
 
 import itertools
 import operator
+import textwrap
 
 
 class PreProcessed(object):
@@ -206,3 +211,38 @@ def process_paragraphs(paragraph_elements):
                 pre = PreProcessed(element)
         except exceptions.RecomposeWarning:
             continue
+def get_paragraph_head(source, maxlength, bullet_num=-1, bullet=False):
+    """Return the paragraph text of specific length, optionally prefix a bullet.
+
+    Args:
+        source(str, PreProcessed, etree._Element)
+        maxlength(int)
+    Kwargs:
+        bullet(bool): False by default, otherwise prefix paragraph text with
+                      either '* )' or '##)' where # corresponds to a zero padded
+                      integer.
+        bullet_num(int): By default, the bullet is un-numerated, otherwise it
+                         will take the bullet number.
+    """
+    if bullet_num > -1:
+        bullet = True
+    if not bullet:
+        bullet_s = ""
+    else:
+        if bullet_num < 0:
+            bullet_s = "* ) "
+        else:
+            bullet_s = f"{bullet_num:02d}) "
+
+    if isinstance(source, PreProcessed):
+        string = str(source.pre_italic)
+    elif isinstance(source, etree._Element):
+        string = source.xpath("string()")
+    # TODO PostProcessed condition
+    else:
+        string = str(source)
+    string = f"{bullet_s}{string}"
+    if maxlength != 30:
+        print(f"*** maxlength: {maxlength}")
+    short = textwrap.shorten(string, width=maxlength, placeholder=" ...")
+    return short
