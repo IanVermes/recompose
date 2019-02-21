@@ -277,7 +277,54 @@ class Test_PreProcessed(ParagraphsTestCase):
                 self.assertIn(expected_detail, str(fail.exception))
 
     def test_validate_method_exception_detail_includes_offending_text(self):
-        self.fail("not written")
+        funcs = [self.italic_correct_sequence_longer,
+                 self.italic_interrupted_sequence_longer_raises]
+        expected = [((False, 'Pre Text 1Pre Text 2Pre Text 3'),
+                    (True, 'Italic Text 1Italic Text 2'),
+                    (False, 'Post Text 1Post Text 2Post Text 3')),
+                    # func1 result
+                   ((False, 'Pre Text 1Pre Text 2Pre Text 3'),
+                    (True, 'First Italic Text 1First Italic Text 2'),
+                    (False, 'Interupted Not Italic 1Interupted Not Italic 2'),
+                    (True, 'Second Italic Text 1Second Italic Text 2Second Italic Text 3'),
+                    (False, 'Post Text 1Post Text 2'))
+                    # func2 result
+                    ]
+        details = [tuple((f"italic: {s}" for b, s in t if b)) for t in expected]
+        funcs = {f: (f.__name__, exp, d) for f, exp, d in zip(funcs, expected, details)}
+        method_grouper = paragraphs.PreProcessed._group_italic_substrings
+        method_is_valid = paragraphs.PreProcessed._is_valid_italic_pattern
+        expected_exception = exceptions.ParagraphItalicPatternWarning
+
+        for xml_func, (name, expect_res, detail) in funcs.items():
+            xml = xml_func()
+            with self.subTest(xml_type=name, fatal=True):
+                actual_res = method_grouper(xml)
+
+                # Test1 : Verify grouping works.
+                self.check_grouped_italic_strings(actual_res, expect_res)
+
+                # Test2 : Verify exceptions raised better detail.
+                try:
+                    method_is_valid(xml, fatal=True, _memoize=False)
+                except expected_exception as err:
+                    error = str(err)
+                else:
+                    error = ""
+                if error:
+                    msg = f"{name} should not have raised an exception!"
+                    self.assertIn("raise", name, msg=msg")
+                    self.assertSubstringsInString(detail, error)
+                else:
+                    msg = f"{name} should not have passed!"
+                    self.assertIn("correct", name, msg=msg)
+
+
+    def check_grouped_italic_strings(self, actual_res, expect_res):
+        self.assertEqual(len(actual_res), len(expect_res), msg="Postcondition")
+        for pair in zip(actual_res, expect_res):
+            actual_tup, expect_tup = pair
+            self.assertTupleEqual(actual_tup, expect_tup)
 
     def test_identify_substrings_method(self):
         xml = self.italic_correct_sequence()
