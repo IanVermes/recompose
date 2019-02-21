@@ -57,6 +57,9 @@ class Test_Processor_Classes(BaseTestCase):
 
 class Test_PreProcessed(ParagraphsTestCase):
 
+    def setUp(self):
+        paragraphs.PreProcessed._reset_xpaths()
+
     def test_instantiation_good_arg_PARA(self):
         query = ("//w:p[(count(descendant::w:i) > 0) and "
                  "(count(descendant::w:t) > 0)]")
@@ -292,14 +295,14 @@ class Test_PreProcessed(ParagraphsTestCase):
                     ]
         details = [tuple((f"italic: {s}" for b, s in t if b)) for t in expected]
         funcs = {f: (f.__name__, exp, d) for f, exp, d in zip(funcs, expected, details)}
-        method_grouper = paragraphs.PreProcessed._group_italic_substrings
+        method_grouper = paragraphs.PreProcessed._group_contiguous_text_by_font
         method_is_valid = paragraphs.PreProcessed._is_valid_italic_pattern
         expected_exception = exceptions.ParagraphItalicPatternWarning
 
         for xml_func, (name, expect_res, detail) in funcs.items():
             xml = xml_func()
             with self.subTest(xml_type=name, fatal=True):
-                actual_res = method_grouper(xml)
+                actual_res = method_grouper(xml, _memoize=False)
 
                 # Test1 : Verify grouping works.
                 self.check_grouped_italic_strings(actual_res, expect_res)
@@ -313,12 +316,11 @@ class Test_PreProcessed(ParagraphsTestCase):
                     error = ""
                 if error:
                     msg = f"{name} should not have raised an exception!"
-                    self.assertIn("raise", name, msg=msg")
+                    self.assertIn("raise", name, msg=msg)
                     self.assertSubstringsInString(detail, error)
                 else:
                     msg = f"{name} should not have passed!"
                     self.assertIn("correct", name, msg=msg)
-
 
     def check_grouped_italic_strings(self, actual_res, expect_res):
         self.assertEqual(len(actual_res), len(expect_res), msg="Postcondition")

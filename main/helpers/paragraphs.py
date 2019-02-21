@@ -204,6 +204,11 @@ class PreProcessed(object):
     def post_italic(self):
         return self.__post_italic.strip()
 
+    @classmethod
+    def _reset_xpaths(cls):
+        """Principally called by unittest suite."""
+        cls._xpaths = None
+
 
 def process_paragraphs(paragraph_elements):
     logger = pkg_logging.getLogger()
