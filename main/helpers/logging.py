@@ -206,10 +206,16 @@ class LoggerWrapper(py_logging.LoggerAdapter):
                     logger_method(source, **kwargs)
 
 
-def setup_logging(log_filename=None):
-    """Setup the logging module using config file.
+def setup_logging(log_filename=None, suppress=False):
+    """Setup the logging module to use a config file or suppress all logging.
 
-    Optionally change the location of the log file.
+    Kwargs:
+        log_filename(str, None): By default use the logfile location specified
+            by the module, otherwise give a pathlike string with existing
+            directories.
+        suppress(bool): By default enable logging with the LoggingHandlers
+            defined by the logging config. Otherwise 'prevent' logging all
+            records to streams or files.
     """
     def check_writeout_directory(log_filename):
         dirname = os.path.dirname(log_filename)
@@ -245,19 +251,25 @@ def setup_logging(log_filename=None):
             detail = repr(err)
             raise exceptions.LoggingSetupError(detail=detail) from err
         return config
-    global __DEFAULT_LOGGING_LEVEL
-    config_filename = __CONFIG_FILE
-    check_config_file_exists(config_filename)
-    if not log_filename:
-        log_filename = default_log_filename()
-    check_writeout_directory(log_filename)
-    config = get_rawconfig(config_filename, log_filename)
 
-    try:
-        py_logging_config.fileConfig(config, disable_existing_loggers=False)
-    except Exception as err:
-        detail = repr(err)
-        raise exceptions.LoggingSetupError(detail=detail) from err
+    if suppress is False:
+        global __DEFAULT_LOGGING_LEVEL
+        config_filename = __CONFIG_FILE
+        check_config_file_exists(config_filename)
+        if not log_filename:
+            log_filename = default_log_filename()
+        check_writeout_directory(log_filename)
+        config = get_rawconfig(config_filename, log_filename)
+
+        try:
+            py_logging_config.fileConfig(config, disable_existing_loggers=False)
+        except Exception as err:
+            detail = repr(err)
+            raise exceptions.LoggingSetupError(detail=detail) from err
+    elif suppress is True:
+        root_logger = py_logging.root
+        root_logger.addHandler(py_logging.NullHandler())
+    global __DEFAULT_LOGGING_LEVEL
     __DEFAULT_LOGGING_LEVEL = py_logging.root.level
     return
 

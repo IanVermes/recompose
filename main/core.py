@@ -64,14 +64,16 @@ def main(input_filename, output_filename):
 
 def main_wrapper(log_filename=None, **kwargs):
     """Entry point with logging tidyed as necessary."""
+
     if log_filename:
-        try:
-            setup_logging(log_filename)
-            main(**kwargs)
-        finally:
-            finish_logging()
+        suppress = False
     else:
+        suppress = True
+    try:
+        setup_logging(log_filename, suppress)
         main(**kwargs)
+    finally:
+        finish_logging()
 
 
 if __name__ == '__main__':

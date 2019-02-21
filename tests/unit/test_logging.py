@@ -204,6 +204,36 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         self.assertEqual(builtin_logger.name, "root")
         self.assertGreaterEqual(pkg_logger.level, expected_level)
 
+    def test_setup_function_has_kwarg_to_suppress_logging_False(self):
+        self.addCleanup(pkg_logging.finish_logging)
+        self.remove_these.append(self.config_default_log)
+        self.remove_these.append(self.module_default_log)
+
+        should_suppress = False
+        message = f"FOOBAR - suppress kwarg is {should_suppress}"
+
+        with testfixtures.OutputCapture() as output:
+            pkg_logging.setup_logging(suppress=should_suppress)
+            logger = pkg_logging.getLogger()
+            logger.critical(message)
+        self.assertTrue(output.captured)
+        self.assertIn(message, output.captured)
+
+    def test_setup_function_has_kwarg_to_suppress_logging_True(self):
+        self.addCleanup(pkg_logging.finish_logging)
+        self.remove_these.append(self.config_default_log)
+        self.remove_these.append(self.module_default_log)
+
+        should_suppress = True
+        message = f"FOOBAR - suppress kwarg is {should_suppress}"
+
+        with testfixtures.OutputCapture() as output:
+            pkg_logging.setup_logging(suppress=should_suppress)
+            logger = pkg_logging.getLogger()
+            logger.critical(message)
+        self.assertEqual("", output.captured)
+        self.assertNotIn(message, output.captured)
+
     def test_func_changes_logging_level(self):
         self.addCleanup(pkg_logging.finish_logging)
         self.remove_these.append(self.config_default_log)
@@ -230,7 +260,6 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         reset_level = pkg_logging.reset_logging_level()
         self.assertNotEqual(final_level, reset_level)
         self.assertEqual(initial_level, reset_level)
-
 
     def test_decorator_raises_exceptions(self):
         decorator = pkg_logging.log_and_reraise
