@@ -281,23 +281,36 @@ class Test_PreProcessed(ParagraphsTestCase):
 
     def test_validate_method_exception_detail_includes_offending_text(self):
         funcs = [self.italic_correct_sequence_longer,
-                 self.italic_interrupted_sequence_longer_raises]
+                 self.italic_interrupted_sequence_longer_raises,
+                 self.italic_interrupted_sequence_with_whitespace_raises]
         expected = [((False, 'Pre Text 1Pre Text 2Pre Text 3'),
                     (True, 'Italic Text 1Italic Text 2'),
                     (False, 'Post Text 1Post Text 2Post Text 3')),
                     # func1 result
-                   ((False, 'Pre Text 1Pre Text 2Pre Text 3'),
-                    (True, 'First Italic Text 1First Italic Text 2'),
-                    (False, 'Interupted Not Italic 1Interupted Not Italic 2'),
-                    (True, 'Second Italic Text 1Second Italic Text 2Second Italic Text 3'),
-                    (False, 'Post Text 1Post Text 2'))
+                    ((False, 'Pre Text 1Pre Text 2Pre Text 3'),
+                     (True, 'First Italic Text 1First Italic Text 2'),
+                     (False, 'Interupted Not Italic 1Interupted Not Italic 2'),
+                     (True, 'Second Italic Text 1Second Italic Text 2Second Italic Text 3'),
+                     (False, 'Post Text 1Post Text 2')),
                     # func2 result
+                    ((False, 'Pre Text 1Pre Text 2Pre Text 3'),
+                     (True, 'First Italic Text 1First Italic Text 2'),
+                     (False, 'Interupted Not Italic 1Interupted Not Italic 2'),
+                     (True, ' '),
+                     (False, 'Post Text 1Post Text 2'))
+                     # func3 result
                     ]
         details = [tuple((f"italic: {s}" for b, s in t if b)) for t in expected]
         funcs = {f: (f.__name__, exp, d) for f, exp, d in zip(funcs, expected, details)}
         method_grouper = paragraphs.PreProcessed._group_contiguous_text_by_font
         method_is_valid = paragraphs.PreProcessed._is_valid_italic_pattern
         expected_exception = exceptions.ParagraphItalicPatternWarning
+        whitespace_generic = "# SPACE! "
+        whitespace_repl = chr(9251)  # OPEN BOX symbol
+        whitespace_specific = f"...Not Italic 2{whitespace_repl}Post Text..."
+        substrings = [whitespace_generic,
+                      whitespace_repl,
+                      whitespace_specific]
 
         for xml_func, (name, expect_res, detail) in funcs.items():
             xml = xml_func()
@@ -321,6 +334,13 @@ class Test_PreProcessed(ParagraphsTestCase):
                 else:
                     msg = f"{name} should not have passed!"
                     self.assertIn("correct", name, msg=msg)
+                    continue
+                # Test3 : Verify whitespace annotated.
+                if error and "whitespace" in name:
+                    self.assertSubstringsInString(substrings, error)
+                else:
+                    msg = f"{name} skipped a test!"
+                    self.assertNotIn("whitespace", name, msg=msg)
 
     def check_grouped_italic_strings(self, actual_res, expect_res):
         self.assertEqual(len(actual_res), len(expect_res), msg="Postcondition")
@@ -497,6 +517,52 @@ class Test_PreProcessed(ParagraphsTestCase):
         <w:r>
             <w:rPr><w:i/></w:rPr>
             <w:t>Second Italic Text 3</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Post Text 2</w:t>
+        </w:r></w:p>
+        """
+        root = etree.fromstring(xml_str)
+        return root
+
+    def italic_interrupted_sequence_with_whitespace_raises(self):
+        xml_str = """<w:p xmlns:w="http://google.com">
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Pre Text 3</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>First Italic Text 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t>First Italic Text 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Interupted Not Italic 1</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr></w:rPr>
+            <w:t>Interupted Not Italic 2</w:t>
+        </w:r>
+        <w:r>
+            <w:rPr><w:i/></w:rPr>
+            <w:t> </w:t>
         </w:r>
         <w:r>
             <w:rPr></w:rPr>

@@ -13,6 +13,7 @@ Copyright: Ian Vermes 2019
 """
 
 import exceptions
+from helpers.strformat import makeItalic
 from helpers import xml
 from helpers import logging as pkg_logging
 
@@ -144,13 +145,14 @@ class PreProcessed(object):
 
     @classmethod
     def _get_italic_pattern(cls, element, _memoize=True):
+        # _memoize kwarg + boiler plate is there to support unittesting
         if not _memoize:
             xpaths = xml.XPaths(element)
         elif cls._xpaths is None:
             xpaths = xml.XPaths(element)
         else:
             xpaths = cls._xpaths
-        # xpaths = xml.XPaths(element)
+
         find_r_elems_with_text = xpaths.get(cls.__query_r_elements)
         r_elements = find_r_elems_with_text(element)
         has_italic_child = xpaths.get(cls.__query_bool_r_descendant_italic)
@@ -159,24 +161,100 @@ class PreProcessed(object):
 
     def is_valid_italic_pattern(self, fatal=False):
         element = self.__paragraph
-        return self._is_valid_italic_pattern(element, fatal=fatal)
+        italic = True
+        return self._is_valid_italic_pattern(element,
+                                             fatal=fatal,
+                                             _font=italic)
 
     @classmethod
-    def _is_valid_italic_pattern(cls, element, fatal=False, _memoize=True):
+    def _is_valid_italic_pattern(cls, element, fatal=False, _memoize=True, _font=False):
+        # _memoize kwarg + boiler plate is there to support unittesting
 
-        def format_detail(pattern):
+        def annotate_italic_space(index, groups):
+            _, string = groups[index]
+            repl = string.replace(" ", chr(9251))  # OPEN BOX
+            context_length = 15
+            spaceing = " " * 8
+            ellipsis = "..."
+
+            index_leftright = (index - 1, index + 1)
+            leftright = []
+            for i in index_leftright:
+                try:
+                    _, context = groups[i]
+                except IndexError:
+                    _, context = ""
+                leftright.append(context)
+            left, right = leftright
+            reversed_left = left[::-1]
+            left = textwrap.shorten(reversed_left, context_length,
+                                    placeholder=ellipsis)[::-1]
+            right = textwrap.shorten(right, context_length,
+                                     placeholder=ellipsis)
+            annotation = f"{spaceing}# SPACE! {left}{repl}{right}"
+            return annotation
+
+        def format_detail(groups, font=False):
             mapping = {True: "italic", False: "non-italic"}
-            return ", ".join([mapping[b] for b in pattern])
+            spaceing = " " * 4
+            detail_pattern = []
+            detail_faults = []
+            bullet_template = "{i:<2d})"
+            j = 0
+            for i, (is_italic, string) in enumerate(groups):
+                detail_pattern.append(mapping[is_italic])
+                if is_italic:
+                    j += 1
+                    if font:
+                        new_string = makeItalic(string)
+                    else:
+                        new_string = string
+                    if string.isspace():
+                        annotation = annotate_italic_space(i, groups)
+                    else:
+                        annotation = ""
+                    bullet = bullet_template.format(i=j)
+                    detail_faults.append((f"{spaceing}{bullet} italic: "
+                                          f"{new_string}{annotation}"))
 
+            detail_pattern = ", ".join(detail_pattern)
+            detail_faults = "\n".join(detail_faults)
+            detail = f"{detail_pattern}. Faults:\n{detail_faults}"
+            return detail
+        # Generate the simple pattern of the italics tags in the paragraph.
+        # If they do not correspond to the expected pattern, raise a
+        # detailed error.
         pattern = cls._get_italic_pattern(element, _memoize=_memoize)
         simple_pattern = tuple(cls._unique_justseen(pattern))
         is_valid = simple_pattern == cls._allowed_pattern
         if fatal and not is_valid:
-            detail = format_detail(simple_pattern)
+            groups = cls._group_contiguous_text_by_font(element)
+            detail = format_detail(groups, _font)
             err = exceptions.ParagraphItalicPatternWarning(detail=detail)
             raise err
         else:
             return is_valid
+
+    @classmethod
+    def _group_contiguous_text_by_font(cls, element, _memoize=True):
+        # _memoize kwarg + boiler plate is there to support unittesting
+        if not _memoize:
+            xpaths = xml.XPaths(element)
+        elif cls._xpaths is None:
+            xpaths = xml.XPaths(element)
+        else:
+            xpaths = cls._xpaths
+
+        find_r_elems = xpaths.get(cls.__query_r_elements)
+        r_elems = find_r_elems(element)
+        is_italic = xpaths.get(cls.__query_bool_r_descendant_italic)
+        # Group r elements into italic & not-italic stretches
+        stretches = []
+        for italicflag, r_group in itertools.groupby(r_elems, key=is_italic):
+            r_string = cls._get_string_from_r_elem_sequence(r_group, xpaths)
+            flagged_string = (italicflag, r_string)
+            stretches.append(flagged_string)
+        return stretches
 
     @staticmethod
     def _unique_justseen(iterable, key=None):
