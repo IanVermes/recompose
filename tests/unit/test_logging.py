@@ -182,6 +182,56 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         pkg_logging.finish_logging()
         self.assertSubstringsInString(expected_substrings, str(fail.exception))
 
+    def test_setup_function_sets_root_logger_to_INFO_level(self):
+        import logging
+        self.addCleanup(pkg_logging.finish_logging)
+        self.remove_these.append(self.config_default_log)
+        self.remove_these.append(self.module_default_log)
+        expected_level = logging.INFO
+        pkg_logging.setup_logging()
+
+        # Test reporting function
+        default_level = pkg_logging.get_default_logging_level()
+        self.assertEqual(default_level, expected_level)
+
+        # Test package
+        pkg_logger = pkg_logging.getLogger()
+        self.assertEqual(pkg_logger.name, "recomposeLogger")
+        self.assertGreaterEqual(pkg_logger.level, expected_level)
+
+        # Test builtin/root
+        builtin_logger = logging.getLogger()
+        self.assertEqual(builtin_logger.name, "root")
+        self.assertGreaterEqual(pkg_logger.level, expected_level)
+
+    def test_func_changes_logging_level(self):
+        self.addCleanup(pkg_logging.finish_logging)
+        self.remove_these.append(self.config_default_log)
+        self.remove_these.append(self.module_default_log)
+        pkg_logging.setup_logging()
+
+        expected_level = pkg_logging.get_default_logging_level()
+        pkg_logger = pkg_logging.getLogger()
+        initial_level = pkg_logger.level
+        self.assertEqual(expected_level, initial_level)
+
+        pkg_logging.setLevel("CRITICAL")
+        intermediate_level = pkg_logger.level
+        self.assertNotEqual(initial_level, intermediate_level)
+
+        pkg_logging.setLevel(initial_level)
+        penultimate_level = pkg_logger.level
+        self.assertEqual(initial_level, penultimate_level)
+
+        pkg_logging.setLevel("ERROR")
+        final_level = pkg_logger.level
+        self.assertNotEqual(penultimate_level, final_level)
+
+        reset_level = pkg_logging.reset_logging_level()
+        self.assertNotEqual(final_level, reset_level)
+        self.assertEqual(initial_level, reset_level)
+
+
     def test_decorator_raises_exceptions(self):
         decorator = pkg_logging.log_and_reraise
         expected_exception = ValueError
@@ -252,8 +302,6 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
             line_0, line_1 = captured.output
             self.assertIn(prelogger_str, line_0)
             self.assertIn(expected_exception_str, line_1)
-
-
 
     def test_decorator_can_suppress_specified_exceptions(self):
         decorator_cm = pkg_logging.log_suppress_or_reraise
@@ -410,6 +458,9 @@ class Test_LoggerWrapper(LoggingTestCase):
         levels = "DEBUG INFO WARNING ERROR CRITICAL".split()
 
         wrapped_logger = pkg_logging.LoggerWrapper(logger)
+        # Preconditon: agnostic of logger setting, essentially tests the
+        # handlers.
+        pkg_logging.setLevel("DEBUG")
 
         for level in levels:
             with self.subTest(level=level):
@@ -424,6 +475,9 @@ class Test_LoggerWrapper(LoggingTestCase):
         levels = "DEBUG INFO WARNING ERROR CRITICAL".split()
 
         wrapped_logger = pkg_logging.getLogger()
+        # Preconditon: agnostic of logger setting, essentially tests the
+        # handlers.
+        pkg_logging.setLevel("DEBUG")
 
         for level in levels:
             with self.subTest(level=level):
@@ -439,6 +493,9 @@ class Test_LoggerWrapper(LoggingTestCase):
             self.addCleanup(pkg_logging.finish_logging)
 
             wrapped_logger = pkg_logging.getLogger()
+            # Preconditon: agnostic of logger setting, essentially tests the
+            # handlers.
+            pkg_logging.setLevel("DEBUG")
 
             for level in levels:
                 wrapped_logger.log(self.coded_levels[level], self.message)
@@ -605,6 +662,8 @@ class Test_Logging_Runtime_Behaviour(LoggingTestCase):
                 disable_existing_loggers=True
                 )
             logger = self.logging_builtin.getLogger("recomposeLogger")
+            # Set the level to DEBUG as we want to just test the handlers.
+            logger.setLevel(10)
             # Do logging
             logger.debug(debug_msg)
             logger.info(info_msg)

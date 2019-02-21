@@ -6,13 +6,23 @@ classes:
     LogSuppressOrReraise    - decorator/context manager
     LoggerWrapper
 
-functions:
-    setup_logging
-    log_and_reraise         - decorator/context manager
-    log_suppress_or_reraise - decorator/context manager
-    finish_logging
+convenience funcs:
+    setLevel
     getLogger
+
+package level funcs:
+    setup_logging
+    finish_logging
+
+functions:
     default_log_filename
+    get_current_logging_level
+    get_default_logging_level
+    log_and_reraise          - decorator/context manager
+    log_suppress_or_reraise  - decorator/context manager
+    reset_logging_level
+    set_logging_level
+
 
 Copyright: Ian Vermes 2019
 """
@@ -34,7 +44,7 @@ def _get_relpath_relative_to_this_py(filename):
 __CONFIG_FILE = _get_relpath_relative_to_this_py("../../logger_setup.cfg")
 __DEFAULT_LOGFILENAME = _get_relpath_relative_to_this_py("../../../logs/recompose.log")
 __DEFAULT_LOGGER_NAME = "recomposeLogger"
-
+__DEFAULT_LOGGING_LEVEL = py_logging.NOTSET
 
 class LogSuppressOrReraise(contextlib.ContextDecorator):
     """Context manager or decorator - logs, raises & can suppress exceptions.
@@ -96,8 +106,7 @@ class LogSuppressOrReraise(contextlib.ContextDecorator):
         else:
             autolog_kwargs = {}
             if level is None:
-                autolog_kwargs["level"] = self.logger.level
-                print(f"\n*** def _log_prelog_object: (self.logger.level: {self.logger.level}")
+                autolog_kwargs["level"] = "INFO"
             else:
                 autolog_kwargs["level"] = level
             try:
@@ -236,7 +245,7 @@ def setup_logging(log_filename=None):
             detail = repr(err)
             raise exceptions.LoggingSetupError(detail=detail) from err
         return config
-
+    global __DEFAULT_LOGGING_LEVEL
     config_filename = __CONFIG_FILE
     check_config_file_exists(config_filename)
     if not log_filename:
@@ -249,6 +258,7 @@ def setup_logging(log_filename=None):
     except Exception as err:
         detail = repr(err)
         raise exceptions.LoggingSetupError(detail=detail) from err
+    __DEFAULT_LOGGING_LEVEL = py_logging.root.level
     return
 
 
@@ -286,3 +296,34 @@ def getLogger(name=None):
 def default_log_filename():
     """Convenince function to get the package default output detination."""
     return __DEFAULT_LOGFILENAME
+
+
+def get_default_logging_level():
+    """Convenince function to get the package default logging level."""
+    return __DEFAULT_LOGGING_LEVEL
+
+
+def get_current_logging_level():
+    """Convenince function to get the package default output detination."""
+    logger = getLogger()
+    return logger.level
+
+
+def setLevel(level):
+    """Convenince function to set level for the root and package logger."""
+    set_logging_level(level)
+
+
+def set_logging_level(level):
+    """Convenince function to set level for the root and package logger."""
+    if isinstance(level, str):
+        level = getattr(py_logging, level.upper())
+    py_logging.root.setLevel(level)
+    logger = getLogger()
+    logger.setLevel(level)
+
+
+def reset_logging_level():
+    """Convenince function to reset the level of the root and package logger."""
+    set_logging_level(get_default_logging_level())
+    return get_current_logging_level()
