@@ -91,6 +91,26 @@ class PreProcessed(object):
         self.__post_italic = post
 
     @classmethod
+    def _get_string_from_r_elem_sequence(cls, r_sequence, xpaths):
+        """Get and join the text tags from a in iterable of w:r elements.
+
+        Does not consider if r elements are contiguous or otherwise.
+        """
+        def find_text(cls, r_elem, xpaths):
+            get_text = xpaths.get(cls.__query_text_from_t)
+            is_smallCaps = xpaths.get(cls.__query_bool_r_descendant_caps)
+            strings = get_text(r_elem)
+            if is_smallCaps(r_elem):
+                strings = (s.upper() for s in strings)
+            else:
+                strings = iter(strings)
+            return strings
+
+        strings = (find_text(cls, r, xpaths) for r in r_sequence)
+        strings = itertools.chain.from_iterable(strings)
+        return "".join(strings)
+
+    @classmethod
     def _identify_substrings(cls, element, _memoize=True):
 
         if not _memoize:
@@ -100,20 +120,7 @@ class PreProcessed(object):
         else:
             xpaths = cls._xpaths
 
-        def get_string(cls, subsequence, xpaths):
-            def find_text(cls, r_elem, xpaths):
-                get_text = xpaths.get(cls.__query_text_from_t)
-                is_smallCaps = xpaths.get(cls.__query_bool_r_descendant_caps)
-                strings = get_text(r_elem)
-                if is_smallCaps(r_elem):
-                    strings = (s.upper() for s in strings)
-                else:
-                    strings = iter(strings)
-                return strings
-
-            strings = (find_text(cls, r, xpaths) for r in subsequence)
-            strings = itertools.chain.from_iterable(strings)
-            return "".join(strings)
+        get_string = cls._get_string_from_r_elem_sequence
 
         # Partition r elements into has italic & not-italic
         find_r_elems = xpaths.get(cls.__query_r_elements)
@@ -126,9 +133,9 @@ class PreProcessed(object):
         packed_iters = cls._partition(is_after_italic, iterable=r_non_italic)
         r_non_italic_pre, r_non_italic_post = packed_iters
         # Generate text from iters
-        pre_string = get_string(cls, r_non_italic_pre, xpaths)
-        italic_string = get_string(cls, r_italic, xpaths)
-        post_string = get_string(cls, r_non_italic_post, xpaths)
+        pre_string = get_string(r_non_italic_pre, xpaths)
+        italic_string = get_string(r_italic, xpaths)
+        post_string = get_string(r_non_italic_post, xpaths)
         return pre_string, italic_string, post_string
 
     def get_italic_pattern(self):
