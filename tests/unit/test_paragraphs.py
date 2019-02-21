@@ -247,8 +247,8 @@ class Test_PreProcessed(ParagraphsTestCase):
         funcs = {f: f.__name__ for f in funcs}
         method = paragraphs.PreProcessed._is_valid_italic_pattern
         expected_exception = exceptions.ParagraphItalicPatternWarning
-        expected_substrings = ["paragraph", "has", "pattern",
-                               "Found", "one italic section",
+        expected_substrings = ["paragraph", "has", "Pattern",
+                               "found", "one italic section",
                                "two non-italic sections"]
 
         for xml_func, name in funcs.items():
