@@ -30,7 +30,8 @@ class TestResourcesPresent(BaseTestCase):
                      "BR Autumn 2018.xml",
                      "BR Spring 2019 Track Changes.xml",
                      "BR Autumn 2018 UTF8.txt",
-                     "BR Spring 2019 (final from ML).xml"}
+                     "BR Spring 2019 (final from ML).xml",
+                     "BR Spring 2019 V5.9.xml"}
         cls.dir = "./resources"
 
     def test_directory_present(self):

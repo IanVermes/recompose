@@ -22,6 +22,7 @@ EXPECTED_PREFIXES = set(['xml', 'pkg', 'wps', 'wne', 'wpi', 'wpg', 'w15', 'w14',
                          'w', 'w10', 'wp', 'wp14', 'v', 'm', 'r', 'o', 'mv',
                          'mc', 'mo', 'wpc', 'a', 'sl', 'ds', 'xsi', 'dcmitype',
                          'dcterms', 'dc', 'cp', 'b', 'vt', None])
+EXTRA_PREFIXES = {'ds', 'b'}
 
 SAMPLE_URIS = {"pkg": "http://schemas.microsoft.com/office/2006/xmlPackage",
                "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
@@ -239,6 +240,7 @@ class XMLAsInput(object):
         try:
             fileobject.seek(0, 0)
             tree = etree.parse(fileobject)
+            flag1_options = [set(), EXTRA_PREFIXES]
 
             nsmap = {}  # Good files share prefixes and uris.
             default_uris = set()
@@ -247,14 +249,12 @@ class XMLAsInput(object):
                     default_uris.add(uri)  # XML may multiple None prefixes
                 nsmap[prefix] = uri
             prefixes = set(nsmap)
+            pref_vs_exp_pref = prefixes.symmetric_difference(EXPECTED_PREFIXES)
 
-            flag1 =  prefixes == EXPECTED_PREFIXES
+            flag1 = pref_vs_exp_pref in flag1_options
             flag2 = all([(nsmap.get(pre, "") == uri) for pre, uri in SAMPLE_URIS.items() if pre is not None])
             flag3 = 1 < len(default_uris.intersection(UNPREFIXED_URIS)) <= 3
             self.logger.debug(f"namespace: flag1={flag1}, flag2={flag2}, flag3={flag3}")
-            if not flag1:
-                diff = prefixes.symmetric_difference(EXPECTED_PREFIXES)
-                self.logger.debug(f"symmetric_difference: {diff}")  # TODO {'ds', 'b'}
             boolean = all([flag1, flag2, flag3])
         finally:
             fileobject.seek(0, 0)
