@@ -13,6 +13,8 @@ from lxml import etree
 
 import unittest
 import os
+import logging
+import functools
 
 
 class UserStories_CommandLine(CommandLineTestCase):
@@ -160,22 +162,50 @@ class UserStories_CommandLine(CommandLineTestCase):
         # A user chooses a filename for the output file
         outbasename = "custom_output.xml"
         logbasename = "custom_logfile.log"
-        for output_filename in self.user_specified_output_files(outbasename):
-            for log_filename in self.user_specified_output_files(logbasename):
-                with self.subTest(out=output_filename, log=log_filename):
-                    # User invokes main.core with an XML file, specified output
-                    # and specified logging
-                    cmd = self.user_story_generates_cmd(
-                               output_file=output_filename,
-                               log_file=log_filename)
-                    # Program runs, nothing printed to stdout except some logs
-                    # and writes output file.
-                    status = self.user_story_program_runs_from_good_cmd(cmd,
-                                                    user_out=True, user_log=True)
-                    self.fail("Fails at output analysis - remove this self.fail "
-                              "block at a later point.")
-                    self.user_story_after_successful_execution(status)
+        iter_output = self.user_specified_output_files(outbasename)
+        iter_logfile = self.user_specified_output_files(logbasename)
+        for output_filename, log_filename in nest(iter_output, iter_logfile):
+            with self.subTest(out=output_filename, log=log_filename):
+                # User invokes main.core with an XML file, specified output
+                # and specified logging
+                cmd = self.user_story_generates_cmd(
+                           output_file=output_filename,
+                           log_file=log_filename)
+                # Program runs, nothing printed to stdout except some logs
+                # and writes output file.
+                status = self.user_story_program_runs_from_good_cmd(cmd,
+                                                user_out=True, user_log=True)
+                self.user_story_after_execution_related_to_logging_operations()
+                self.fail("Fails at output analysis - remove this self.fail "
+                          "block at a later point.")
+                self.user_story_after_successful_execution(status)
 
+    def test_command_line_entry_correct_with_output_argument_and_output_logging_and_logging_level(self):
+        # A user chooses a filename for the output file
+        outbasename = "custom_output.xml"
+        logbasename = "custom_logfile.log"
+        iter_output = self.user_specified_output_files(outbasename)
+        iter_logfile = self.user_specified_output_files(logbasename)
+        levels = [None, "DEBUG", "INFO"]
+        for tup in nest(iter_output, iter_logfile, levels):
+            output_filename, log_filename, level = tup
+            with self.subTest(out=output_filename, log=log_filename, lvl=level):
+                # User invokes main.core with an XML file, specified output
+                # , specified logging and logging level
+                cmd = self.user_story_generates_cmd(
+                           output_file=output_filename,
+                           log_file=log_filename,
+                           log_level=level)
+                # Program runs, nothing printed to stdout except some logs
+                # and writes output file.
+                status = self.user_story_program_runs_from_good_cmd(cmd,
+                                                user_out=True, user_log=True)
+                # The logging output is as the user expects
+                self.user_story_after_execution_related_to_logging_operations(level)
+                self.fail("Fails at output analysis - remove this self.fail "
+                          "block at a later point.")
+                self.user_story_after_successful_execution(status)
+    #
     def test_command_line_entry_bad_file(self):
 
         def user_story(self, input_filename):
@@ -239,7 +269,7 @@ class UserStories_CommandLine(CommandLineTestCase):
     # USER STORIES: sub-stories
     # USER STORIES: sub-stories
 
-    def user_story_generates_cmd(self, output_file=None, log=False, log_file=None):
+    def user_story_generates_cmd(self, output_file=None, log=False, log_file=None, log_level=None):
         # User invokes main.core with an XML file and specified output
         templates = {
             False: self.cmd_basic + " {file_argument}",
@@ -252,6 +282,9 @@ class UserStories_CommandLine(CommandLineTestCase):
             cmd_template += " -l"
         if log_file:
             cmd_template += " {file_log}"
+        if log_level is not None:
+            cmd_template += f" --level {log_level}"
+
         ## Set instance attributes for tearDown, default file getting
         ## and for use in follow-on userstories
         self.output_file = output_file
@@ -318,6 +351,25 @@ class UserStories_CommandLine(CommandLineTestCase):
                                           directory=os.getcwd())
         return status
 
+    def user_story_after_execution_related_to_logging_operations(self, level=None):
+        # Log file was written
+        self.assertTrue(os.path.isfile(self.log_file))
+
+        # Does the first line say what that the logging level is what the user set?
+        with open(self.log_file) as log_handle:
+            first_line = log_handle.readline()
+        template = "Logging level set at {user_level}."
+        if level is None:
+            default_level = "INFO"
+            expected_first_line = template.format(user_level=default_level)
+            self.assertIn(expected_first_line, first_line)
+        else:
+            expected_first_line = template.format(user_level=level)
+            self.assertIn(expected_first_line, first_line)
+
+
+
+
     @unittest.expectedFailure
     def user_story_after_successful_execution(self, status):
         # Program exited cleanly
@@ -338,6 +390,31 @@ class UserStories_CommandLine(CommandLineTestCase):
         if errmsg:
             self.fail(errmsg)
         self.assertTrue(schema.validate(parsed_xml))
+
+
+def nest(*iterables):
+    """Flatten nested for loops it a single tuple yielding generator.
+
+    Useful in that it prevents over indentation.
+    Source: http://code.activestate.com/recipes/473818/#c1
+
+    Thus:
+    for i, j, c in nest(range(10), range(10), "ABCDEF"):
+        do_something(i, j, c)
+
+    Is equivalent to:
+    for i in range(10):
+        for j in range(10):
+            for c in "ABCDEF":
+                do_something(i, j, c)
+    """
+    def _nest(outer, inner):
+        for outer_item in outer:
+            if not isinstance(outer_item, tuple):
+                outer_item = (outer_item,)
+            for inner_item in inner:
+                yield outer_item + (inner_item,)
+    return functools.reduce(_nest, iterables)
 
 
 if __name__ == '__main__':

@@ -27,11 +27,10 @@ the following components:
 Copyright: Ian Vermes 2019
 """
 import exceptions
+import helpers.paragraphs as paragraphs
 from helpers.argparse import RecomposeArgParser
 from helpers.xml import XMLAsInput
-from helpers.logging import setup_logging, finish_logging
-
-import os
+import helpers.logging as pkg_logging
 
 
 class _TestingPrimitive():
@@ -56,24 +55,28 @@ def main(input_filename, output_filename):
         input.isSuitable(input_filename, fatal=True)
     except exceptions.InputFileError as err:
         raise exceptions.RecomposeExit(exception=err) from None
-    else:
-        with open(output_filename, "w") as handle:
-            handle.write("foo")
-        return
+    # TODO - placeholder for the XML writer component
+    with open(output_filename, "w") as handle:
+        handle.write("foo")
+    return
 
 
-def main_wrapper(log_filename=None, **kwargs):
+def main_wrapper(log_filename=None, log_level=None, **kwargs):
     """Entry point with logging tidyed as necessary."""
-
     if log_filename:
         suppress = False
     else:
         suppress = True
     try:
-        setup_logging(log_filename, suppress)
+        pkg_logging.setup_logging(log_filename, suppress)
+        if log_level is not None:
+            pkg_logging.setLevel(log_level)
+        logger = pkg_logging.getLogger()
+        log_level_actual = pkg_logging.get_current_logging_level_by_name()
+        logger.info(f"Logging level set at {log_level_actual}.")
         main(**kwargs)
     finally:
-        finish_logging()
+        pkg_logging.finish_logging()
 
 
 if __name__ == '__main__':
