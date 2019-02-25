@@ -16,8 +16,6 @@ from lxml import etree
 import os
 from collections import UserDict
 
-LOGGING_LEVEL = 20  # Log INFO or above
-
 EXPECTED_PREFIXES = set(['xml', 'pkg', 'wps', 'wne', 'wpi', 'wpg', 'w15', 'w14',
                          'w', 'w10', 'wp', 'wp14', 'v', 'm', 'r', 'o', 'mv',
                          'mc', 'mo', 'wpc', 'a', 'sl', 'ds', 'xsi', 'dcmitype',
@@ -145,7 +143,6 @@ class XMLAsInput(object):
     def __init__(self):
         super().__init__()
         self.logger = pkg_logging.getLogger()
-        self.logger.setLevel(LOGGING_LEVEL)
         self.__suitable = False
         self.__has_trackchanges = False
         self.__tree = None
