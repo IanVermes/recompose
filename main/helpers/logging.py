@@ -207,7 +207,7 @@ class LoggerWrapper(py_logging.LoggerAdapter):
 
 
 def setup_logging(log_filename=None, suppress=False):
-    """Setup the logging module to use a config file or suppress all logging.
+    """Setup the logging module to use a config file or suppress logging output.
 
     Kwargs:
         log_filename(str, None): By default use the logfile location specified
@@ -319,6 +319,11 @@ def get_current_logging_level():
     """Convenince function to get the package default output detination."""
     logger = getLogger()
     return logger.level
+
+
+def get_current_logging_level_by_name():
+    logger = getLogger()
+    return py_logging.getLevelName(logger.level)
 
 
 def setLevel(level):

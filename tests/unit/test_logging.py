@@ -245,17 +245,21 @@ class Test_HelperLogging_Runtime_Behaviour(LoggingTestCase):
         initial_level = pkg_logger.level
         self.assertEqual(expected_level, initial_level)
 
-        pkg_logging.setLevel("CRITICAL")
+        new_level = "CRITICAL"
+        pkg_logging.setLevel(new_level)
         intermediate_level = pkg_logger.level
         self.assertNotEqual(initial_level, intermediate_level)
+        self.assertEqual(new_level, pkg_logging.get_current_logging_level_by_name())
 
         pkg_logging.setLevel(initial_level)
         penultimate_level = pkg_logger.level
         self.assertEqual(initial_level, penultimate_level)
 
+        new_level = "ERROR"
         pkg_logging.setLevel("ERROR")
         final_level = pkg_logger.level
         self.assertNotEqual(penultimate_level, final_level)
+        self.assertEqual(new_level, pkg_logging.get_current_logging_level_by_name())
 
         reset_level = pkg_logging.reset_logging_level()
         self.assertNotEqual(final_level, reset_level)
