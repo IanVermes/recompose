@@ -86,7 +86,16 @@ class RecomposeArgParser(object):
                                   "Optionally one can specify the log file "
                                   "location.")
         )
-
+        parser.add_argument('--level',
+                            dest="log_level",
+                            metavar="MODE",
+                            choices=['INFO', 'DEBUG', 'WARNING',
+                                     'ERROR', 'CRITICAL'],
+                            default=None,
+                            help=("The minimal level at which the logger will "
+                                  "record log events. If logging is diabled, "
+                                  "the value of this argument is ignored.")
+        )
         return parser
 
     def get_args(self):
