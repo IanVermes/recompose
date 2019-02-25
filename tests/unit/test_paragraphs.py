@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
-"""Unit test of paragraph processing classes: PreProcessed and PostProcessed.
+"""Unit test of paragraph processing classes: PreProcessed and PostProcessed
+as well as Processor subclasses.
 
 Copyright: Ian Vermes 2019
 """
@@ -39,6 +40,15 @@ class Test_Processor_Classes(BaseTestCase):
                                  "Post": paragraphs.ProcessorPostItalic,
                                  "Italic": paragraphs.ProcessorItalic}
 
+        expected_attrs = {"authors": "authors editors",
+                          "title": "title series",
+                          "meta": ("illustrator translator "
+                                   "publisher publplace year "
+                                   "pages price isbn")}
+        for attr_group, attr in expected_attrs.items():
+            expected_attrs[attr_group] = attr.split()
+        cls.expected_attrs = expected_attrs
+
     @classmethod
     def tearDownClass(cls):
         cls.patcher.stop()
@@ -53,6 +63,20 @@ class Test_Processor_Classes(BaseTestCase):
                 attr_value = getattr(pre, attr)
                 dict_value = self.mock_config[attr]
                 self.assertEqual(attr_value, dict_value)
+
+    def test_attr_by_group(self):
+        pre = self.MockPreProcessed("Some XML paragraph <w:p>")
+        pre.configure_mock(**self.mock_config)
+
+        post = paragraphs.PostProcessed(pre)
+
+        for group in self.expected_attrs:
+            with self.subTest(criteria=f"{group} - hasAttr"):
+                for attr in self.expected_attrs[group]:
+                    with self.subTest(attr=attr):
+
+                        self.assertHasAttr(post, attr)
+
 
 
 class Test_PreProcessed(ParagraphsTestCase):

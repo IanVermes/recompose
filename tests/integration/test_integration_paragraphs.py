@@ -6,14 +6,16 @@
 Copyright: Ian Vermes 2019
 """
 
-from tests.base_testcases import InputFileTestCase
+from tests.base_testcases import InputFileTestCase, BaseTestCase
 from helpers import xml
 from helpers import paragraphs
 
 from lxml import etree
 
 import unittest
+from unittest.mock import patch
 import os
+import functools
 from difflib import SequenceMatcher
 
 
@@ -122,6 +124,154 @@ class Test_Paragraph_Selection(InputFileTestCase):
         self.assertEqual(prepara.italic, docx_italic)
         docx_postitalic = "Sheffield Phoenix Press, Sheffield, 2017. xv, 256 pp. £60.00. ISBN 978 1 91092 825 7.".strip()
         self.assertEqual(prepara.post_italic, docx_postitalic)
+
+
+class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        PreProcessed_config = {"pre_italic": "Berthelot, Katell, Michaël Langlois and Thierry Legrand,",
+                               "italic": "La Bibliothèque de Qumran 3b: Torah Deutéronome et Pantateque dans son ensemble.",
+                               "post_italic": "Les Éditions du Cerf, Paris, 2017. xxi, 730 pp. €75.00. ISBN 978 2 20411 147 8."
+        }
+        cls.mock_config = PreProcessed_config
+        cls.patcher = patch("helpers.paragraphs.PreProcessed", autospec=True)
+        cls.MockPreProcessed = cls.patcher.start()
+
+        expected_attrs = {"authors": "authors editors",
+                          "title": "title series",
+                          "meta": ("illustrator translator "
+                                   "publisher publplace year "
+                                   "pages price isbn")}
+        for attr_group, attr in expected_attrs.items():
+            expected_attrs[attr_group] = attr.split()
+        cls.expected_attrs = expected_attrs
+
+        cls.pre = cls.MockPreProcessed("Some XML paragraph <w:p>")
+        cls.pre.configure_mock(**cls.mock_config)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.patcher.stop()
+
+    @unittest.expectedFailure
+    def test_attr_group_AUTHORS_values(self):
+        group = "authors"
+        # Sideffect: set deliberatly consumed by test
+        expected_attrs = set(self.expected_attrs[group])
+        method = self.check_post_value_by_attr
+
+        pre = self.pre
+        post = paragraphs.PostProcessed(pre)
+        check_value = functools.partial(method, post=post,
+                                        precondition=expected_attrs)
+
+        # GENERAL:
+        # Check attr name is expected as a precondition, in case spec changes.
+        # Value of attr == expected value of attr
+        attr, exp_value = "authors", [("Katell", "Berthelot"),
+                                      ("Michaël", "Langlois"),
+                                      ("Thierry", "Legrand")]
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "editors", list()
+        check_value(attr=attr, value=exp_value)
+
+        # Poscondition:
+        self.assertEqual(len(expected_attrs), 0,
+                         msg=("Postcondition: did not check all attrs - "
+                              f"{expected_attrs}"))
+
+    @unittest.expectedFailure
+    def test_attr_group_TITLE_values(self):
+        group = "title"
+        # Sideffect: set deliberatly consumed by test
+        expected_attrs = set(self.expected_attrs[group])
+        method = self.check_post_value_by_attr
+
+        pre = self.pre
+        post = paragraphs.PostProcessed(pre)
+        check_value = functools.partial(method, post=post,
+                                        precondition=expected_attrs)
+
+        # GENERAL:
+        # Check attr name is expected as a precondition, in case spec changes.
+        # Value of attr == expected value of attr
+        attr, exp_value = "title", ("La Bibliothèque de Qumran 3b: Torah "
+                                    "Deutéronome et Pantateque dans son "
+                                    "ensemble.")
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "series", ""
+        check_value(attr=attr, value=exp_value)
+
+        # Poscondition:
+        self.assertEqual(len(expected_attrs), 0,
+                         msg=("Postcondition: did not check all attrs - "
+                              f"{expected_attrs}"))
+
+    @unittest.expectedFailure
+    def test_attr_group_META_values(self):
+        group = "meta"
+        # Sideffect: set deliberatly consumed by test
+        expected_attrs = set(self.expected_attrs[group])
+        method = self.check_post_value_by_attr
+
+        pre = self.pre
+        post = paragraphs.PostProcessed(pre)
+        check_value = functools.partial(method, post=post,
+                                        precondition=expected_attrs)
+
+        # GENERAL:
+        # Check attr name is expected as a precondition, in case spec changes.
+        # Value of attr == expected value of attr
+        attr, exp_value = "illustrator", ""
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "translator", ""
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "publisher", "Les Éditions du Cerf"
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "publplace", "Paris"
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "year", "2017"
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "pages", "xxi, 730 pp"
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "price", "€75.00"
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "isbn", "9782204111478"
+        check_value(attr=attr, value=exp_value)
+
+        attr, exp_value = "issn", ""
+        check_value(attr=attr, value=exp_value)
+
+        # Poscondition:
+        self.assertEqual(len(expected_attrs), 0,
+                         msg=("Postcondition: did not check all attrs - "
+                              f"{expected_attrs}"))
+
+    def check_post_value_by_attr(self, post, attr, expected, precondition=None):
+        with self.subTest(attr=attr):
+            if not precondition:
+                msg = ("Preconditon should a be a set of attributes. This "
+                       "container was empty.")
+                raise ValueError(msg)
+            if attr not in precondition:
+                assertmsg = (f"Precondition: {attr} is not in the setUpClass "
+                             "expected attr specification for "
+                             f"{post.__class__.__name__}.")
+                self.fail(assertmsg)
+            else:
+                precondition.remove(attr)
+            value = getattr(post, attr)
+            self.assertEqual(value, expected)
 
 
 if __name__ == '__main__':
