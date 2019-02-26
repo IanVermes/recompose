@@ -287,13 +287,13 @@ class ParagraphsTestCase(InputFileTestCase):
             raise FileNotFoundError(cls.text_filename)
 
 
-class ExtractedParagraphs_General(BaseTestCase):  # Not TestCase
+class ProcessorTestCase_Genuine(BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
         cls._strings = {}
-        cls._str_files = {"pre": "resources/PreProcessed_preitalic.txt",
-                          "post": "resources/PreProcessed_postitalic.txt",
+        cls._str_files = {"pre_italic": "resources/PreProcessed_preitalic.txt",
+                          "post_italic": "resources/PreProcessed_postitalic.txt",
                           "italic": "resources/PreProcessed_italic.txt"}
         for key, filename in cls._str_files.items():
             if os.path.exists(filename):
@@ -302,6 +302,19 @@ class ExtractedParagraphs_General(BaseTestCase):  # Not TestCase
                     cls._strings[key] = lines
             else:
                 raise FileNotFoundError(filename)
+
+class ProcessorTestCase_Abstract(object):
+
+    def test_instantiation_general(self):
+        Processor = self.Processor
+
+        with self.subTest(criteria="empty string"):
+            with self.assertRaises(ValueError):
+                obj = Processor("")
+
+        with self.subTest(criter="wrong type"):
+            with self.assertRaises(TypeError):
+                obj = Processor(42)
 
 
 class CommandLineTestCase(BaseTestCase):

@@ -6,7 +6,7 @@ as well as Processor subclasses.
 Copyright: Ian Vermes 2019
 """
 
-from tests.base_testcases import ParagraphsTestCase, BaseTestCase
+from tests.base_testcases import ParagraphsTestCase, BaseTestCase, ProcessorTestCase_Genuine, ProcessorTestCase_Abstract
 
 import helpers.logging as pkg_logging
 from helpers import paragraphs
@@ -16,7 +16,7 @@ import exceptions
 import testfixtures
 from lxml import etree
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import random
 import unittest
 import functools
@@ -24,15 +24,20 @@ import itertools
 import os
 
 
+PREPROCESSED_CONFIG = {
+    "pre_italic": "Berthelot, Katell, Michaël Langlois and Thierry Legrand,",
+    "italic": ("La Bibliothèque de Qumran 3b: Torah Deutéronome et "
+               "Pantateque dans son ensemble."),
+    "post_italic": ("Les Éditions du Cerf, Paris, 2017. xxi, 730 pp. €75.00. "
+                    "ISBN 978 2 20411 147 8.")
+}
+
+
 class Test_Processor_Classes(BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        PreProcessed_config = {"pre_italic": "Berthelot, Katell, Michaël Langlois and Thierry Legrand,",
-                               "italic": "La Bibliothèque de Qumran 3b: Torah Deutéronome et Pantateque dans son ensemble.",
-                               "post_italic": "Les Éditions du Cerf, Paris, 2017. xxi, 730 pp. €75.00. ISBN 978 2 20411 147 8."
-        }
-        cls.mock_config = PreProcessed_config
+        cls.mock_config = PREPROCESSED_CONFIG
         cls.patcher = patch("helpers.paragraphs.PreProcessed", autospec=True)
         cls.MockPreProcessed = cls.patcher.start()
 
@@ -96,6 +101,54 @@ class Test_Processor_Classes(BaseTestCase):
         for attr in expected_attrs:
             with self.subTest(attr=attr):
                 self.assertHasAttr(processor_obj, attr)
+
+
+class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.group = "pre_italic"
+        cls.strings = cls._strings[cls.group]
+        cls.Processor = paragraphs.ProcessorAuthors
+
+        cls.mock_config = PREPROCESSED_CONFIG
+        cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
+
+    def test_instantiation_pre(self):
+        attr_in_question = self.group
+        bad_config = self.mock_config.copy()
+        bad_config.pop(attr_in_question)
+        wrong_config = self.mock_config.copy()
+        wrong_value = 53
+        wrong_config[attr_in_question] = wrong_value
+
+        with self.subTest(criteria=f"Bad PreProcessed - no attr: {attr_in_question}"):
+            bad_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
+            bad_pre.configure_mock(**bad_config)
+            delattr(bad_pre, attr_in_question)
+            self.assertFalse(hasattr(bad_pre, attr_in_question),
+                             msg="Precondition")
+
+            with self.assertRaises(TypeError):
+                self.Processor(bad_pre)
+
+        with self.subTest(criteria=f"Bad PreProcessed - attr value wrongtype"):
+            wrong_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
+            wrong_pre.configure_mock(**wrong_config)
+            self.assertHasAttr(wrong_pre, attr_in_question, msg="Precondition")
+            self.assertEqual(getattr(wrong_pre, attr_in_question), wrong_value)
+
+            with self.assertRaises(TypeError):
+                self.Processor(wrong_pre)
+
+        with self.subTest(criteria=f"Good PreProcessed"):
+            good_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
+            good_pre.configure_mock(**self.mock_config)
+            self.assertHasAttr(good_pre, attr_in_question, msg="Precondition")
+
+            self.Processor(good_pre)
+
 
 
 class Test_PreProcessed(ParagraphsTestCase):

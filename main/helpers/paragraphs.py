@@ -28,17 +28,48 @@ from functools import partial
 class Processor(object):
     """Abstract/base class for Processor subclasses."""
 
+    def __init__(self, source):
+        self._oktype = PreProcessed
+        self._raw_string = self._init_precondition(source)
+
+    def _init_precondition(self, source):
+        try:
+            # We resolve natural strings in the attribute error.
+            raw_string = getattr(source, self._pre_attr_name)
+            if not isinstance(raw_string, str):
+                raise TypeError()
+        except AttributeError:
+            if isinstance(source, self._oktype):
+                raise
+            else:
+                if isinstance(source, str):
+                    raw_string = source
+                else:
+                    msg = ("Parameter must be a string or "
+                           f"{self._oktype.__name__}.")
+                    raise TypeError(msg) from None
+        except TypeError:
+            msg = (f"Value of {self._oktype.__name__}.{self._pre_attr_name} "
+                   "is not a string. Got: {type(raw_string)}")
+            raise TypeError(msg) from None
+        if not raw_string:
+            raise ValueError("Empty string.")
+        return raw_string
+
 
 class ProcessorAuthors(Processor):
     """Processor for authorial data from a string or PreProcessed object."""
+    _pre_attr_name = "pre_italic"
 
 
 class ProcessorTitle(Processor):
     """Processor for titular data from a string or PreProcessed object."""
+    _pre_attr_name = "italic"
 
 
 class ProcessorMeta(Processor):
     """Processor for meta-data from a string or PreProcessed object."""
+    _pre_attr_name = "post_italic"
 
 
 class PostProcessed(object):
@@ -46,6 +77,18 @@ class PostProcessed(object):
 
 
 class PreProcessed(object):
+    """Identify the italic and non-italic parts of an XML paragraph element.
+
+    Attrs:
+        pre_italic
+        italic
+        post_italic
+        xpaths
+    Methods:
+        is_valid_italic_pattern
+        get_italic_pattern
+        identify_substrings
+    """
 
     _xpaths = None
     _allowed_pattern = (False, True, False)
