@@ -303,19 +303,6 @@ class ProcessorTestCase_Genuine(BaseTestCase):
             else:
                 raise FileNotFoundError(filename)
 
-class ProcessorTestCase_Abstract(object):
-
-    def test_instantiation_general(self):
-        Processor = self.Processor
-
-        with self.subTest(criteria="empty string"):
-            with self.assertRaises(ValueError):
-                obj = Processor("")
-
-        with self.subTest(criter="wrong type"):
-            with self.assertRaises(TypeError):
-                obj = Processor(42)
-
 
 class CommandLineTestCase(BaseTestCase):
 

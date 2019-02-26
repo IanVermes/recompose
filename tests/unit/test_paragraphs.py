@@ -6,7 +6,8 @@ as well as Processor subclasses.
 Copyright: Ian Vermes 2019
 """
 
-from tests.base_testcases import ParagraphsTestCase, BaseTestCase, ProcessorTestCase_Genuine, ProcessorTestCase_Abstract
+from tests.base_testcases import ParagraphsTestCase, BaseTestCase, ProcessorTestCase_Genuine
+from tests.special_testcases import ProcessorTestCase_Abstract
 
 import helpers.logging as pkg_logging
 from helpers import paragraphs
@@ -115,40 +116,31 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
         cls.mock_config = PREPROCESSED_CONFIG
         cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
 
-    def test_instantiation_pre(self):
-        attr_in_question = self.group
-        bad_config = self.mock_config.copy()
-        bad_config.pop(attr_in_question)
-        wrong_config = self.mock_config.copy()
-        wrong_value = 53
-        wrong_config[attr_in_question] = wrong_value
 
-        with self.subTest(criteria=f"Bad PreProcessed - no attr: {attr_in_question}"):
-            bad_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
-            bad_pre.configure_mock(**bad_config)
-            delattr(bad_pre, attr_in_question)
-            self.assertFalse(hasattr(bad_pre, attr_in_question),
-                             msg="Precondition")
+class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
-            with self.assertRaises(TypeError):
-                self.Processor(bad_pre)
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.group = "italic"
+        cls.strings = cls._strings[cls.group]
+        cls.Processor = paragraphs.ProcessorTitle
 
-        with self.subTest(criteria=f"Bad PreProcessed - attr value wrongtype"):
-            wrong_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
-            wrong_pre.configure_mock(**wrong_config)
-            self.assertHasAttr(wrong_pre, attr_in_question, msg="Precondition")
-            self.assertEqual(getattr(wrong_pre, attr_in_question), wrong_value)
+        cls.mock_config = PREPROCESSED_CONFIG
+        cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
 
-            with self.assertRaises(TypeError):
-                self.Processor(wrong_pre)
 
-        with self.subTest(criteria=f"Good PreProcessed"):
-            good_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
-            good_pre.configure_mock(**self.mock_config)
-            self.assertHasAttr(good_pre, attr_in_question, msg="Precondition")
+class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
-            self.Processor(good_pre)
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.group = "post_italic"
+        cls.strings = cls._strings[cls.group]
+        cls.Processor = paragraphs.ProcessorMeta
 
+        cls.mock_config = PREPROCESSED_CONFIG
+        cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
 
 
 class Test_PreProcessed(ParagraphsTestCase):
