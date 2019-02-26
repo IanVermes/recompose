@@ -31,6 +31,8 @@ class Processor(object):
     def __init__(self, source):
         self._oktype = PreProcessed
         self._raw_string = self._init_precondition(source)
+        for attr in self._data_attrs:
+            super().__setattr__(attr, None)
 
     def _init_precondition(self, source):
         try:
@@ -60,20 +62,50 @@ class Processor(object):
 class ProcessorAuthors(Processor):
     """Processor for authorial data from a string or PreProcessed object."""
     _pre_attr_name = "pre_italic"
+    _data_attrs = set("authors editors".split())
 
 
 class ProcessorTitle(Processor):
     """Processor for titular data from a string or PreProcessed object."""
     _pre_attr_name = "italic"
+    _data_attrs = set("title series".split())
 
 
 class ProcessorMeta(Processor):
     """Processor for meta-data from a string or PreProcessed object."""
     _pre_attr_name = "post_italic"
+    _data_attrs = set(("illustrator translator publisher publplace year "
+                       "pages price isbn issn").split())
 
 
 class PostProcessed(object):
     """A data-object that validates and greps a PreProcessed object."""
+    _processor_types = [ProcessorAuthors, ProcessorTitle, ProcessorMeta]
+    _data_attrs = set(itertools.chain.from_iterable(
+                      p._data_attrs for p in _processor_types))
+
+    def __init__(self, preprocessed):
+        # Assign the Processor object programatically and map it with its own
+        # data attributes.
+        attr2processor = dict()
+        for Processor in self._processor_types:
+            attr_name = "_" + Processor.__name__.lower() + "_obj"
+            obj = Processor(preprocessed)
+            attr2processor.update({da: obj for da in Processor._data_attrs})
+            super().__setattr__(attr_name, obj)
+
+        # Assign the corresponding Processor object value for each specified
+        # Class data attribute.
+        # NB The implicit logic is: PostProcessor.attr <- Processor.attr
+        for postprocessor_attr in PostProcessed._data_attrs:
+            processor_obj = attr2processor[postprocessor_attr]
+            processor_val = getattr(processor_obj, postprocessor_attr)
+            # Ensure empty string replaces None or empty containers
+            # if not processor_val:  # TODO - uncomment once integration test passes.
+            #     processor_val = str()
+            super().__setattr__(postprocessor_attr, processor_val)
+
+        self._attr2processor = attr2processor
 
 
 class PreProcessed(object):
