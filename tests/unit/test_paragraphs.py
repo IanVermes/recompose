@@ -36,9 +36,9 @@ class Test_Processor_Classes(BaseTestCase):
         cls.patcher = patch("helpers.paragraphs.PreProcessed", autospec=True)
         cls.MockPreProcessed = cls.patcher.start()
 
-        cls.processor_classes = {"Pre": paragraphs.ProcessorPreItalic,
-                                 "Post": paragraphs.ProcessorPostItalic,
-                                 "Italic": paragraphs.ProcessorItalic}
+        cls.processor_classes = {"authors": paragraphs.ProcessorAuthors,
+                                 "title": paragraphs.ProcessorTitle,
+                                 "meta": paragraphs.ProcessorMeta}
 
         expected_attrs = {"authors": "authors editors",
                           "title": "title series",
@@ -53,6 +53,10 @@ class Test_Processor_Classes(BaseTestCase):
     def tearDownClass(cls):
         cls.patcher.stop()
 
+    def setUp(self):
+        self.pre = self.MockPreProcessed("Some XML paragraph <w:p>")
+        self.pre.configure_mock(**self.mock_config)
+
     def test_mocked_PreProcessed(self):
         pre = self.MockPreProcessed("Some XML paragraph <w:p>")
         pre.configure_mock(**self.mock_config)
@@ -64,10 +68,8 @@ class Test_Processor_Classes(BaseTestCase):
                 dict_value = self.mock_config[attr]
                 self.assertEqual(attr_value, dict_value)
 
-    def test_attr_by_group(self):
-        pre = self.MockPreProcessed("Some XML paragraph <w:p>")
-        pre.configure_mock(**self.mock_config)
-
+    def test_PostProcessed_attr_by_group(self):
+        pre = self.pre
         post = paragraphs.PostProcessed(pre)
 
         for group in self.expected_attrs:
@@ -77,6 +79,23 @@ class Test_Processor_Classes(BaseTestCase):
 
                         self.assertHasAttr(post, attr)
 
+    def test_Processor_attrs_by_group(self):
+        for group in self.processor_classes.keys():
+            with self.subTest(group=group):
+                self.check_Processor_attrs_by_group(group)
+
+    def check_Processor_attrs_by_group(self, group):
+        pre = self.pre
+        Processor = self.processor_classes[group]
+        self.assertIn(group.lower(), Processor.__name__.lower(),
+                      msg="Precondition - class name is sensible!")
+        expected_attrs = self.expected_attrs[group]
+
+        processor_obj = Processor(pre)
+
+        for attr in expected_attrs:
+            with self.subTest(attr=attr):
+                self.assertHasAttr(processor_obj, attr)
 
 
 class Test_PreProcessed(ParagraphsTestCase):
@@ -190,7 +209,6 @@ class Test_PreProcessed(ParagraphsTestCase):
         other_finder = pre1.xpaths.get(some_query)
         self.assertIs(this_finder, other_finder)
 
-    # @unittest.expectedFailure
     def test_attrs_substrings(self):
         iter_para = self.input.iter_paragraphs()
         para = next(iter_para)

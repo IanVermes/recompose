@@ -25,6 +25,26 @@ import textwrap
 from functools import partial
 
 
+class Processor(object):
+    """Abstract/base class for Processor subclasses."""
+
+
+class ProcessorAuthors(Processor):
+    """Processor for authorial data from a string or PreProcessed object."""
+
+
+class ProcessorTitle(Processor):
+    """Processor for titular data from a string or PreProcessed object."""
+
+
+class ProcessorMeta(Processor):
+    """Processor for meta-data from a string or PreProcessed object."""
+
+
+class PostProcessed(object):
+    """A data-object that validates and greps a PreProcessed object."""
+
+
 class PreProcessed(object):
 
     _xpaths = None
@@ -307,7 +327,6 @@ def process_paragraphs(paragraph_elements):
             continue
         else:
             pass
-
 
 
 def get_paragraph_head(source, maxlength, bullet_num=-1, bullet=False):
