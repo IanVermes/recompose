@@ -142,7 +142,7 @@ class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
                           "title": "title series",
                           "meta": ("illustrator translator "
                                    "publisher publplace year "
-                                   "pages price isbn")}
+                                   "pages price isbn issn")}
         for attr_group, attr in expected_attrs.items():
             expected_attrs[attr_group] = attr.split()
         cls.expected_attrs = expected_attrs
@@ -154,7 +154,6 @@ class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
     def tearDownClass(cls):
         cls.patcher.stop()
 
-    @unittest.expectedFailure
     def test_attr_group_AUTHORS_values(self):
         group = "authors"
         # Sideffect: set deliberatly consumed by test
@@ -172,17 +171,16 @@ class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
         attr, exp_value = "authors", [("Katell", "Berthelot"),
                                       ("Michaël", "Langlois"),
                                       ("Thierry", "Legrand")]
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "editors", list()
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         # Poscondition:
         self.assertEqual(len(expected_attrs), 0,
                          msg=("Postcondition: did not check all attrs - "
                               f"{expected_attrs}"))
 
-    @unittest.expectedFailure
     def test_attr_group_TITLE_values(self):
         group = "title"
         # Sideffect: set deliberatly consumed by test
@@ -200,17 +198,16 @@ class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
         attr, exp_value = "title", ("La Bibliothèque de Qumran 3b: Torah "
                                     "Deutéronome et Pantateque dans son "
                                     "ensemble.")
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "series", ""
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         # Poscondition:
         self.assertEqual(len(expected_attrs), 0,
                          msg=("Postcondition: did not check all attrs - "
                               f"{expected_attrs}"))
 
-    @unittest.expectedFailure
     def test_attr_group_META_values(self):
         group = "meta"
         # Sideffect: set deliberatly consumed by test
@@ -226,31 +223,31 @@ class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
         # Check attr name is expected as a precondition, in case spec changes.
         # Value of attr == expected value of attr
         attr, exp_value = "illustrator", ""
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "translator", ""
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "publisher", "Les Éditions du Cerf"
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "publplace", "Paris"
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "year", "2017"
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "pages", "xxi, 730 pp"
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "price", "€75.00"
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "isbn", "9782204111478"
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         attr, exp_value = "issn", ""
-        check_value(attr=attr, value=exp_value)
+        check_value(attr=attr, expected=exp_value)
 
         # Poscondition:
         self.assertEqual(len(expected_attrs), 0,
@@ -261,7 +258,9 @@ class Test_PostProcessor_Produces_Expected_Object(BaseTestCase):
         with self.subTest(attr=attr):
             if not precondition:
                 msg = ("Preconditon should a be a set of attributes. This "
-                       "container was empty.")
+                       "set is empty. Maybe the attr was removed from the "
+                       "set by an earlier call of check_post_value_by_attr "
+                       f"or the set never included attr='{attr}'.")
                 raise ValueError(msg)
             if attr not in precondition:
                 assertmsg = (f"Precondition: {attr} is not in the setUpClass "
