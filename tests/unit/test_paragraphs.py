@@ -116,6 +116,11 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
         cls.mock_config = PREPROCESSED_CONFIG
         cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
 
+        cls.strucural_arg["good"] = ("Hockey, Katherine M., and David G. "
+                                     "Horrell (eds),")
+        cls.strucural_arg["bad"] = ("Berthelot, Katell, Michaël Langlois and "
+                                    "Thierry Legrand,")
+
 
 class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
@@ -129,6 +134,15 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
         cls.mock_config = PREPROCESSED_CONFIG
         cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
 
+        cls.strucural_arg["good"] = ("New Approaches to an Integrated History "
+                                     "of the Holocaust: Social History, "
+                                     "Representation, Theory. Lessons and "
+                                     "Legacies: Volume XIII.")
+        cls.strucural_arg["bad"] = ("Lessons and Legacies, Volume XIII: New "
+                                    "Approaches to an Integrated History of "
+                                    "the Holocaust: Social History, "
+                                    "Representation, Theory.")
+
 
 class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
@@ -141,6 +155,13 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
 
         cls.mock_config = PREPROCESSED_CONFIG
         cls.MockPreProcessed = MagicMock(autospec=helpers.paragraphs.PreProcessed)
+
+        cls.strucural_arg["good"] = ("Translated by Michaela Lang. Indiana "
+                                     "University Press, Bloomington IN, 2018. "
+                                     "ix, 161 pp. $65.00. ISBN 978 0 25303 "
+                                     "835 7.")
+        cls.strucural_arg["bad"] = ("The Jewish Museum of Greece, Athens, "
+                                    "2018. 312 pp. ISBN 978 9 60888 539 4.")
 
 
 class Test_PreProcessed(ParagraphsTestCase):

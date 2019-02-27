@@ -303,6 +303,8 @@ class ProcessorTestCase_Genuine(BaseTestCase):
             else:
                 raise FileNotFoundError(filename)
 
+        cls.strucural_arg = {"good": "", "bad": ""}
+
 
 class CommandLineTestCase(BaseTestCase):
 

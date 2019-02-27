@@ -59,6 +59,33 @@ class ProcessorTestCase_Abstract(object):
 
             self.Processor(good_pre)
 
+    def test_method_hasGoodStructure(self):
+        subtest_info = {"criteria": "", "processor": self.Processor.__name__}
+        # Good result  - tuple, zeroth value is zero
+        # Bad result  - tuple, zeroth value is not zero
+        passing_result = (0, "")
+        subtest_info["criteria"] = "arg:good structure"
+        with self.subTest(**subtest_info):
+            arg = self.strucural_arg["good"]
+            processor_obj = self.Processor(arg)
+
+            result = processor_obj.hasGoodStructure()
+
+            self.assertTupleEqual(result, passing_result)
+
+        subtest_info["criteria"] = "arg:bad structure"
+        with self.subTest(**subtest_info):
+            arg = self.strucural_arg["bad"]
+            processor_obj = self.Processor(arg)
+
+            result = processor_obj.hasGoodStructure()
+            self.assertNotEqual(result, passing_result)
+            self.assertIsInstance(result, tuple)
+            self.assertIsInstance(result[0], int)
+            self.assertIsInstance(result[1], str)
+
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
