@@ -59,7 +59,7 @@ class ProcessorTestCase_Abstract(object):
 
             self.Processor(good_pre)
 
-    def test_method_hasGoodStructure(self):
+    def test_method_hasGoodStructure_specific(self):
         subtest_info = {"criteria": "", "processor": self.Processor.__name__}
         # Good result  - tuple, zeroth value is zero
         # Bad result  - tuple, zeroth value is not zero
@@ -95,6 +95,35 @@ class ProcessorTestCase_Abstract(object):
                 self.assertIsInstance(hidden, tuple)
                 self.assertIsInstance(hidden[0], int)
                 self.assertIsInstance(hidden[1], str)
+
+    def test_method_hasGoodStructure_general(self):
+        are_good = []
+        are_bad = []
+        for string in self.strings:
+
+            processor_obj = self.Processor(string)
+            result = processor_obj.hasGoodStructure()
+            reason = processor_obj.validation_results
+            msg = f"  {result} -> {string}\n    {reason}"
+            if result:
+                are_good.append(msg)
+            else:
+                are_bad.append(msg)
+        success_percent = len(are_good) / len(self.strings) * 100
+        shortmsg = (f"***\n {self.Processor.__name__} - success rate: "
+                    f"{success_percent:2.1f}%.")
+        bad_strings = '\n'.join(are_bad)
+        longmsg = (f"{shortmsg}\n{bad_strings}\n***")
+
+        threshold_75 = int(len(self.strings) / 4 * 3), "75%"
+        threshold_50 = int(len(self.strings) / 2), "50%"
+        threshold_25 = int(len(self.strings) / 4), "25%"
+
+        self.assertGreaterEqual(success_percent, threshold_25[0], msg=longmsg)
+        self.assertGreaterEqual(success_percent, threshold_50[0], msg=longmsg)
+        self.assertGreaterEqual(success_percent, threshold_75[0], msg=longmsg)
+
+
 
     def test_cls_method_split(self):
         self.fail("Overload this method.")
