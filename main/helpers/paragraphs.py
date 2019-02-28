@@ -183,21 +183,18 @@ class ProcessorAuthors(Processor):
             else:
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Editor notification appears too often, not just at end.
-                if not flag:
-                    self._structure_report.add(self._INVALID_PLACEHOLDER)
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
                 return flag_position
         elif not flag_position:
             if rgx_editor.search(string) is not None:
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Editor appears but not at end.
-                if not flag:
-                    self._structure_report.add(self._INVALID_PLACEHOLDER)
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
                 return flag_position
             elif rgx_editor_fuzzy.search(string) is not None:
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Something that looks like Editor appears.
-                if not flag:
-                    self._structure_report.add(self._INVALID_PLACEHOLDER)
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
                 return flag_position
             else:
                 ## Editor notification legitimately absent.
