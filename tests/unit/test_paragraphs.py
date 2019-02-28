@@ -149,11 +149,11 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
                 if missing1 in string:
                     counter += 1
                     result = cls_method(string)
-                    self.assertNotIn(missing1, string)
+                    self.assertNotIn(missing1, result)
                 elif missing2 in string:
                     counter += 1
                     result = cls_method(string)
-                    self.assertNotIn(missing2, string)
+                    self.assertNotIn(missing2, result)
                 else:
                     result = cls_method(string)
                     self.assertEqual(string, result)
