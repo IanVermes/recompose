@@ -30,10 +30,10 @@ from functools import partial
 class Processor(abc.ABC):
     """Abstract/base class for Processor subclasses."""
     # Tokens used in subclasses
-    _comma = ","
-    _commaspace = ", "
-    _oxfordcomma = ", and"
-    _oxfordand = _oxfordcomma + " "
+    _COMMA = ","
+    _COMMASPACE = ", "
+    _OXFORDCOMMA = ", and"
+    _OXFORDAND = _OXFORDCOMMA + " "
     _VALID_REPORT = (0, "")
     _INVALID_PLACEHOLDER = (1, "DETAIL TO ADD TO EXCEPTION STRING")  # TODO
 
@@ -134,11 +134,11 @@ class ProcessorAuthors(Processor):
         return flag
 
     def __count_commas(self):
-        return self._raw_string.count(self._comma)
+        return self._raw_string.count(self._COMMA)
 
     def _cond_seperators_balance(self):
         count_comma = self.__count_commas()
-        count_commaspace = self._raw_string.count(self._commaspace)
+        count_commaspace = self._raw_string.count(self._COMMASPACE)
         flag = count_comma - count_commaspace == 1
         # TODO injected error code/error detail is generic PLACEHOLDER
         if not flag:
@@ -148,7 +148,7 @@ class ProcessorAuthors(Processor):
     def _cond_ok_oxford_comma(self):
         if self.__count_commas() > 2:
             string = self._raw_string.lower()
-            flag = string.count(self._oxfordcomma) == 1
+            flag = string.count(self._OXFORDCOMMA) == 1
             # TODO injected error code/error detail is generic PLACEHOLDER
             if not flag:
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
@@ -158,7 +158,7 @@ class ProcessorAuthors(Processor):
         return flag
 
     def _cond_endswith_comma(self):
-        flag = self._raw_string.endswith(self._comma)
+        flag = self._raw_string.endswith(self._COMMA)
         # TODO injected error code/error detail is generic PLACEHOLDER
         if not flag:
             self._structure_report.add(self._INVALID_PLACEHOLDER)
@@ -215,7 +215,7 @@ class ProcessorAuthors(Processor):
 
     def _cond_rogue_and(self):
         bare_and = " and "
-        oxford_and = self._oxfordand
+        oxford_and = self._OXFORDAND
         count = self._raw_string.count
         flag = count(bare_and) == count(oxford_and)
         # TODO injected error code/error detail is generic PLACEHOLDER
@@ -237,11 +237,11 @@ class ProcessorAuthors(Processor):
         result = []
         string = string.strip()
         string = cls.strip_editor(string)
-        string = string.strip().strip(cls._comma)
+        string = string.strip().strip(cls._COMMA)
         # Split an author after the oxford comma, if there is one.
-        other_auths, *last = string.rsplit(cls._oxfordand, maxsplit=1)
+        other_auths, *last = string.rsplit(cls._OXFORDAND, maxsplit=1)
         # From the remainder split into firstauthor_name1, name2 and other auths
-        split_once = other_auths.split(cls._commaspace, maxsplit=2)
+        split_once = other_auths.split(cls._COMMASPACE, maxsplit=2)
         first_surname, first_name, *other_auths = split_once
         # Process the first author
         first = first_name, first_surname
@@ -251,7 +251,7 @@ class ProcessorAuthors(Processor):
         # Process the remaining other_auths
         if other_auths:
             other_auths = other_auths.pop()
-            other_auths = other_auths.split(cls._commaspace)
+            other_auths = other_auths.split(cls._COMMASPACE)
         result = result + other_auths + last
         return result
 
