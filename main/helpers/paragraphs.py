@@ -71,6 +71,16 @@ class Processor(abc.ABC):
             flag = self.__structure_result
         except AttributeError:
             flag = self._hasGoodStructure()
+        # TODO Tuples/list of tuples should be made by the subclass and
+        # processed by this class to give a boolean. Right now this method
+        # returns the tuple and not a boolean to pass initial unittests Perhaps
+        # a different function called reportValiditiy or reportStructure could
+        # handle the underlying tuple result as this method should be a boolean
+        # test.
+        if flag:
+            return (0, "")
+        elif not flag:
+            return (1, "BAD STRUCTURE ERROR DETAIL")
         return flag
 
     @abc.abstractmethod
@@ -184,7 +194,6 @@ class ProcessorAuthors(Processor):
         # TODO if not flag sideeffect inject error code/error detail
         ## Distinguish error for _cond_ok_oxford_comma
         return flag
-
 
     @classmethod
     def strip_editor(cls, string):
