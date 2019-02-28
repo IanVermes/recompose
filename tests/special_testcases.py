@@ -63,26 +63,38 @@ class ProcessorTestCase_Abstract(object):
         subtest_info = {"criteria": "", "processor": self.Processor.__name__}
         # Good result  - tuple, zeroth value is zero
         # Bad result  - tuple, zeroth value is not zero
-        passing_result = (0, "")
+        passing_visible, passing_hidden = True, (0, "")
+        failing_visible = False
+        lowerbound_hidden_length = 1
         subtest_info["criteria"] = "arg:good structure"
         with self.subTest(**subtest_info):
             arg = self.strucural_arg["good"]
             processor_obj = self.Processor(arg)
 
-            result = processor_obj.hasGoodStructure()
+            result_visible = processor_obj.hasGoodStructure()
+            result_hidden = processor_obj.validation_results
 
-            self.assertTupleEqual(result, passing_result)
+            self.assertTrue(result_visible)
+            self.assertEqual(passing_visible, result_visible)
+            self.assertEqual(lowerbound_hidden_length, len(result_hidden))
+            self.assertIn(passing_hidden, result_hidden)
 
         subtest_info["criteria"] = "arg:bad structure"
         with self.subTest(**subtest_info):
             arg = self.strucural_arg["bad"]
             processor_obj = self.Processor(arg)
 
-            result = processor_obj.hasGoodStructure()
-            self.assertNotEqual(result, passing_result)
-            self.assertIsInstance(result, tuple)
-            self.assertIsInstance(result[0], int)
-            self.assertIsInstance(result[1], str)
+            result_visible = processor_obj.hasGoodStructure()
+            result_hidden = processor_obj.validation_results
+
+            self.assertFalse(result_visible)
+            self.assertEqual(failing_visible, result_visible)
+            self.assertGreaterEqual(len(result_hidden), lowerbound_hidden_length)
+            self.assertNotIn(passing_hidden, result_hidden)
+            for hidden in result_hidden:
+                self.assertIsInstance(hidden, tuple)
+                self.assertIsInstance(hidden[0], int)
+                self.assertIsInstance(hidden[1], str)
 
     def test_cls_method_split(self):
         self.fail("Overload this method.")
