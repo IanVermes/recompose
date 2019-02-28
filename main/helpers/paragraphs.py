@@ -43,6 +43,7 @@ class Processor(abc.ABC):
         for attr in self._data_attrs:
             super().__setattr__(attr, None)
         self.conditional_method_prefix = "_cond"
+        self._assign_values()
 
     def _init_precondition(self, source):
         try:
@@ -85,6 +86,10 @@ class Processor(abc.ABC):
     def _hasGoodStructure(self):
         pass
 
+    @abc.abstractmethod
+    def _assign_values(self):
+        pass
+
     @property
     def validation_results(self):
         results = set()
@@ -106,6 +111,14 @@ class ProcessorAuthors(Processor):
     _pre_attr_name = "pre_italic"
     _data_attrs = set("authors editors".split())
 
+    def isEditor(self):
+        try:
+            flag = self._has_editors
+        except AttributeError:
+            self._cond_editors()
+            flag = self._has_editors
+        return flag
+
     def _hasGoodStructure(self):
         self._structure_report = set()
 
@@ -124,6 +137,21 @@ class ProcessorAuthors(Processor):
             return flag
         else:
             return flag
+
+    def _assign_values(self):
+        use_fill = self.hasGoodStructure()
+        if use_fill:
+            for attr in self._data_attrs:
+                super().__setattr__(attr, list())
+        else:
+            if self.isEditor():
+                self.editors = self.split(self._raw_string)
+                self.authors = list()
+            else:
+                self.authors = self.split(self._raw_string)
+                self.editors = list()
+
+
 
     def _maincond_count_commas(self):
         count_comma = self.__count_commas()
@@ -176,6 +204,10 @@ class ProcessorAuthors(Processor):
         string = self._raw_string
         flag_position = rgx_positional_editor.search(string) is not None
         flag_count = len(rgx_editor.findall(string)) == 1
+        # Save calculation to assignment for isEditor to call.
+        self._has_editors = flag_position
+        # Whether there is an editor pattern at the end or not does not rule out other
+        # mistakes, hence check:
         if flag_position:
             if flag_count:
                 ## Editor notification legitimately present.
