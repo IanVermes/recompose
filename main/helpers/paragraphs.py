@@ -20,19 +20,27 @@ from helpers import logging as pkg_logging
 from lxml import etree
 
 import itertools
+import re
+import abc
 import operator
 import textwrap
 from functools import partial
 
 
-class Processor(object):
+class Processor(abc.ABC):
     """Abstract/base class for Processor subclasses."""
+    # Tokens used in subclasses
+    _comma = ","
+    _commaspace = ", "
+    _oxfordcomma = ", and"
+    _oxfordand = _oxfordcomma + " "
 
     def __init__(self, source):
         self._oktype = PreProcessed
         self._raw_string = self._init_precondition(source)
         for attr in self._data_attrs:
             super().__setattr__(attr, None)
+        self.conditional_method_prefix = "_cond"
 
     def _init_precondition(self, source):
         try:
@@ -58,11 +66,156 @@ class Processor(object):
             raise ValueError("Empty string.")
         return raw_string
 
+    def hasGoodStructure(self):
+        try:
+            flag = self.__structure_result
+        except AttributeError:
+            flag = self._hasGoodStructure()
+        return flag
+
+    @abc.abstractmethod
+    def _hasGoodStructure(self):
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def split(cls, string):
+        pass
+
 
 class ProcessorAuthors(Processor):
     """Processor for authorial data from a string or PreProcessed object."""
     _pre_attr_name = "pre_italic"
     _data_attrs = set("authors editors".split())
+
+    def _hasGoodStructure(self):
+        self.__structure_result = None
+
+        main_flag = self._maincond_count_commas()
+        if not main_flag:
+            flag = main_flag
+        else:
+            prefix = self.conditional_method_prefix
+            cond_methods = [getattr(self, name) for name in dir(self)
+                            if name.startswith(prefix)]
+            iter_bool = (method() for method in cond_methods)
+            secondary_flag = all(b for b in iter_bool if b is not None)
+            flag = secondary_flag
+        self.__structure_result = flag
+        return flag
+
+    def _maincond_count_commas(self):
+        count_comma = self.__count_commas()
+        flag = count_comma >= 2
+        # TODO if not flag sideeffect inject error code/error detail
+        return flag
+
+    def __count_commas(self):
+        return self._raw_string.count(self._comma)
+
+    def _cond_seperators_balance(self):
+        count_comma = self.__count_commas()
+        count_commaspace = self._raw_string.count(self._commaspace)
+        flag = count_comma - count_commaspace == 1
+        # TODO if not flag sideeffect inject error code/error detail
+        return flag
+
+    def _cond_ok_oxford_comma(self):
+        if self.__count_commas() > 2:
+            string = self._raw_string.lower()
+            flag = string.count(self._oxfordcomma) == 1
+            # TODO if not flag sideeffect inject error code/error detail
+        else:
+            # None value has to be filtered
+            flag = None
+        return flag
+
+    def _cond_endswith_comma(self):
+        flag = self._raw_string.endswith(self._comma)
+        # TODO if not flag sideeffect inject error code/error detail
+        return flag
+
+    def _cond_editors(self):
+        pattern_is_editor_fuzzy = r"([\(\ ][Ee][Dd][Ss\.]?)"
+        base_editor_pattern = r"\(ed[\.s]\)"
+        pattern_is_editor = f"({base_editor_pattern})"
+        pattern_is_positional_editor = rf"({base_editor_pattern}\,$)"
+        rgx_editor_fuzzy = re.compile(pattern_is_editor_fuzzy)
+        rgx_editor = re.compile(pattern_is_editor)
+        rgx_positional_editor = re.compile(pattern_is_positional_editor)  # TODO CODE SMELL
+
+        string = self._raw_string
+        flag_position = rgx_positional_editor.search(string) is not None
+        flag_count = len(rgx_editor.findall(string)) == 1
+        if flag_position:
+            if flag_count:
+                ## Editor notification legitimately present.
+                return flag_position
+            else:
+                # TODO if not flag sideeffect inject error code/error detail
+                ## Editor notification appears too often, not just at end.
+                return flag_position
+        elif not flag_position:
+            if rgx_editor.search(string) is not None:
+                # TODO if not flag sideeffect inject error code/error detail
+                ## Editor appears but not at end.
+                return flag_position
+            elif rgx_editor_fuzzy.search(string) is not None:
+                # TODO if not flag sideeffect inject error code/error detail
+                ## Something that looks like Editor appears.
+                return flag_position
+            else:
+                ## Editor notification legitimately absent.
+                return flag_position
+
+    def _cond_auth_length(self):
+        sane_length = 40
+        authors = self.split(self._raw_string, join_first=True)
+        flags = [len(a) <= sane_length for a in authors]
+        # TODO if not flag sideeffect inject error code/error detail
+        flag = all(flags)
+        return flag
+
+    def _cond_rogue_and(self):
+        bare_and = " and "
+        oxford_and = self._oxfordand
+        count = self._raw_string.count
+        flag = count(bare_and) == count(oxford_and)
+        # TODO if not flag sideeffect inject error code/error detail
+        ## Distinguish error for _cond_ok_oxford_comma
+        return flag
+
+
+    @classmethod
+    def strip_editor(cls, string):
+        base_editor_pattern = r"\(ed[\.s]\)"  # TODO CODE SMELL
+        pattern_is_positional_editor = rf"({base_editor_pattern}\,$)"
+        rgx_positional_editor = re.compile(pattern_is_positional_editor)
+        new_string = rgx_positional_editor.sub("", string)
+        return new_string
+
+    @classmethod
+    def split(cls, string, join_first=True):
+        result = []
+        string = string.strip()
+        string = cls.strip_editor(string)
+        string = string.strip().strip(cls._comma)
+        # Split an author after the oxford comma, if there is one.
+        other_auths, *last = string.rsplit(cls._oxfordand, maxsplit=1)
+        # From the remainder split into firstauthor_name1, name2 and other auths
+        split_once = other_auths.split(cls._commaspace, maxsplit=2)
+        first_surname, first_name, *other_auths = split_once
+        # Process the first author
+        first = first_name, first_surname
+        if join_first:
+            first = " ".join(first)
+        result.append(first)
+        # Process the remaining other_auths
+        if other_auths:
+            other_auths = other_auths.pop()
+            other_auths = other_auths.split(cls._commaspace)
+        result = result + other_auths + last
+        return result
 
 
 class ProcessorTitle(Processor):
@@ -70,12 +223,37 @@ class ProcessorTitle(Processor):
     _pre_attr_name = "italic"
     _data_attrs = set("title series".split())
 
+    def _hasGoodStructure(self):
+        self.__structure_result = None
+        # cond_series_info True PASS
+        # cond_series_info False PASS
+
+        # cond_endswith_fullstop (True, False)
+        # cond_colon_count (True)
+        # cond_colon_preceded_by_fullstop (True)
+        # cond_volume_preceded_by_fullstop (True)
+        # cond_volume_ambiguity?
+
 
 class ProcessorMeta(Processor):
     """Processor for meta-data from a string or PreProcessed object."""
     _pre_attr_name = "post_italic"
     _data_attrs = set(("illustrator translator publisher publplace year "
                        "pages price isbn issn").split())
+
+    def _hasGoodStructure(self):
+        self.__structure_result = None
+        # cond_section_count < 2 FAIL
+        # cond_section_count == 4 PASS
+        # cond_section_count == 5 PASS
+        # cond_section_count > 5 FAIL
+
+        # cond_endswith_fullstop (4, 5)
+        # cond_optional_section_struct (5)
+        # cond_section_zero_is_pubplace (4, 5)
+        # cond_section_one_is_pages (4, 5)
+        # cond_section_two_is_price (4, 5)
+        # cond_section_three_is_identifier (4, 5)
 
 
 class PostProcessed(object):
