@@ -84,6 +84,9 @@ class ProcessorTestCase_Abstract(object):
             self.assertIsInstance(result[0], int)
             self.assertIsInstance(result[1], str)
 
+    def test_cls_method_split(self):
+        self.fail("Overload this method.")
+
 
 
 if __name__ == '__main__':

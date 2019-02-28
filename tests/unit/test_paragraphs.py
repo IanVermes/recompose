@@ -120,8 +120,76 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
                                      "Horrell (eds),")
         cls.strucural_arg["bad"] = ("Berthelot, Katell, Michaël Langlois and "
                                     "Thierry Legrand,")
+        cls.first_author = "del Olmo Lete, Gregorio,"
+
+    def test_cls_method_strip_editor(self):
+        cls_method = self.Processor.strip_editor
+
+        with self.subTest(criteria="strip - positive specific"):
+            string = self.strucural_arg["good"]
+            expect = "Hockey, Katherine M., and David G. Horrell "
+
+            result = cls_method(string)
+
+            self.assertNotEqual(string, result)
+            self.assertEqual(result, expect)
+
+        with self.subTest(criteria="strip - negative specific"):
+            string = self.first_author
+            expect = string
+
+            result = cls_method(string)
+
+            self.assertEqual(result, expect)
+
+        with self.subTest(criteria="strip - generic"):
+            missing1, missing2 = "(eds),", "(ed.),"
+            counter = 0
+            for string in self.strings:
+                if missing1 in string:
+                    counter += 1
+                    result = cls_method(string)
+                    self.assertNotIn(missing1, string)
+                elif missing2 in string:
+                    counter += 1
+                    result = cls_method(string)
+                    self.assertNotIn(missing2, string)
+                else:
+                    result = cls_method(string)
+                    self.assertEqual(string, result)
+
+            assertmsg = "Postcondition: nothing was actually tested!"
+            self.assertGreater(counter, 0, msg=assertmsg)
+
+    def test_cls_method_split(self):
+        cls_method = self.Processor.split
+        with self.subTest(criteria="split - multi auth"):
+            string = self.strucural_arg["good"]
+            expected = ["Katherine M. Hockey", "David G. Horrell"]
+
+            result = cls_method(string)
+
+            self.assertListEqual(expected, result)
+
+        with self.subTest(criteria="split - multi auth, bad struct"):
+            string = self.strucural_arg["bad"]
+            expected = ["Katell Berthelot",
+                        "Michaël Langlois and Thierry Legrand"]
+
+            result = cls_method(string)
+
+            self.assertListEqual(expected, result)
+
+        with self.subTest(criteria="split - single author"):
+            string = self.first_author
+            expected = ["Gregorio del Olmo Lete"]
+
+            result = cls_method(string)
+
+            self.assertListEqual(expected, result)
 
 
+@unittest.skip("TestCase missing abstract test")
 class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
     @classmethod
