@@ -120,13 +120,46 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
                                      "Horrell (eds),")
         cls.strucural_arg["bad"] = ("Berthelot, Katell, Michaël Langlois and "
                                     "Thierry Legrand,")
+
         cls.first_author = "del Olmo Lete, Gregorio,"
+
+        cls.editorial_arg = {}
+        cls.editorial_arg["(eds),"] = cls.strucural_arg["good"]
+        cls.editorial_arg["(ed.),"] = "Alexandru, Florian (ed.),"
+        cls.editorial_arg[""] = cls.first_author
+
+
+    def test_mthod_isEditor(self):
+        for editor_suffix in ["(ed.),", "(eds),"]:
+            msg = f"isEditor - positive specific {editor_suffix}"
+            with self.subTest(criteria=msg):
+                string = self.editorial_arg[editor_suffix]
+
+                processor_obj = self.Processor(string)
+                flag = processor_obj.isEditor()
+
+                self.assertTrue(flag)
+                self.assertIs(flag, True)
+
+        no_editor_suffix = ""
+        with self.subTest(criteria=f"strip - negative specific"):
+            string = self.editorial_arg[no_editor_suffix]
+
+            processor_obj = self.Processor(string)
+            flag = processor_obj.isEditor()
+
+            self.assertFalse(flag)
+            self.assertIs(flag, False)
+
 
     def test_cls_method_strip_editor(self):
         cls_method = self.Processor.strip_editor
 
-        with self.subTest(criteria="strip - positive specific"):
-            string = self.strucural_arg["good"]
+        naughty = "(eds),"
+        with self.subTest(criteria=f"strip - positive specific {naughty}"):
+            string = self.editorial_arg[naughty]
+            self.assertIn(naughty, string, msg="Precondtion")
+            # Expect string should have a trailing space.
             expect = "Hockey, Katherine M., and David G. Horrell "
 
             result = cls_method(string)
@@ -134,8 +167,20 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
             self.assertNotEqual(string, result)
             self.assertEqual(result, expect)
 
+        naughty = "(ed.),"
+        with self.subTest(criteria=f"strip - positive specific {naughty}"):
+            string = self.editorial_arg[naughty]
+            self.assertIn(naughty, string, msg="Precondtion")
+            # Expect string should have a trailing space.
+            expect = "Alexandru, Florian "
+
+            result = cls_method(string)
+
+            self.assertNotEqual(string, result)
+            self.assertEqual(result, expect)
+
         with self.subTest(criteria="strip - negative specific"):
-            string = self.first_author
+            string = self.editorial_arg[""]
             expect = string
 
             result = cls_method(string)
