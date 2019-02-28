@@ -34,6 +34,8 @@ class Processor(abc.ABC):
     _commaspace = ", "
     _oxfordcomma = ", and"
     _oxfordand = _oxfordcomma + " "
+    _VALID_REPORT = (0, "")
+    _INVALID_PLACEHOLDER = (1, "DETAIL TO ADD TO EXCEPTION STRING")  # TODO
 
     def __init__(self, source):
         self._oktype = PreProcessed
@@ -68,24 +70,30 @@ class Processor(abc.ABC):
 
     def hasGoodStructure(self):
         try:
-            flag = self.__structure_result
+            report = self._structure_report
         except AttributeError:
-            flag = self._hasGoodStructure()
-        # TODO Tuples/list of tuples should be made by the subclass and
-        # processed by this class to give a boolean. Right now this method
-        # returns the tuple and not a boolean to pass initial unittests Perhaps
-        # a different function called reportValiditiy or reportStructure could
-        # handle the underlying tuple result as this method should be a boolean
-        # test.
-        if flag:
-            return (0, "")
-        elif not flag:
-            return (1, "BAD STRUCTURE ERROR DETAIL")
-        return flag
+            self._hasGoodStructure()
+            report = self._structure_report
+        # TODO Perhaps a different method called reportValiditiy or
+        # reportStructure could handle the underlying set of tuple results.
+        if len(report) > 1:
+            return False
+        else:
+            return self._VALID_REPORT in report
 
     @abc.abstractmethod
     def _hasGoodStructure(self):
         pass
+
+    @property
+    def validation_results(self):
+        results = set()
+        try:
+            report = self._structure_report
+        except AttributeError:
+            self._hasGoodStructure()
+            report = self._structure_report
+        return results.union(report)
 
     @classmethod
     @abc.abstractmethod
@@ -99,25 +107,30 @@ class ProcessorAuthors(Processor):
     _data_attrs = set("authors editors".split())
 
     def _hasGoodStructure(self):
-        self.__structure_result = None
+        self._structure_report = set()
 
         main_flag = self._maincond_count_commas()
-        if not main_flag:
-            flag = main_flag
-        else:
+        if main_flag:
             prefix = self.conditional_method_prefix
             cond_methods = [getattr(self, name) for name in dir(self)
                             if name.startswith(prefix)]
-            iter_bool = (method() for method in cond_methods)
-            secondary_flag = all(b for b in iter_bool if b is not None)
-            flag = secondary_flag
-        self.__structure_result = flag
-        return flag
+            iter_bool = (m() for m in cond_methods)
+            secondary_flag = all([b for b in iter_bool if b is not None])
+            flag = secondary_flag and main_flag
+        else:
+            flag = main_flag
+        if flag:
+            self._structure_report.add(self._VALID_REPORT)
+            return flag
+        else:
+            return flag
 
     def _maincond_count_commas(self):
         count_comma = self.__count_commas()
         flag = count_comma >= 2
-        # TODO if not flag sideeffect inject error code/error detail
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
 
     def __count_commas(self):
@@ -127,14 +140,18 @@ class ProcessorAuthors(Processor):
         count_comma = self.__count_commas()
         count_commaspace = self._raw_string.count(self._commaspace)
         flag = count_comma - count_commaspace == 1
-        # TODO if not flag sideeffect inject error code/error detail
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
 
     def _cond_ok_oxford_comma(self):
         if self.__count_commas() > 2:
             string = self._raw_string.lower()
             flag = string.count(self._oxfordcomma) == 1
-            # TODO if not flag sideeffect inject error code/error detail
+            # TODO injected error code/error detail is generic PLACEHOLDER
+            if not flag:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
         else:
             # None value has to be filtered
             flag = None
@@ -142,7 +159,9 @@ class ProcessorAuthors(Processor):
 
     def _cond_endswith_comma(self):
         flag = self._raw_string.endswith(self._comma)
-        # TODO if not flag sideeffect inject error code/error detail
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
 
     def _cond_editors(self):
@@ -162,17 +181,23 @@ class ProcessorAuthors(Processor):
                 ## Editor notification legitimately present.
                 return flag_position
             else:
-                # TODO if not flag sideeffect inject error code/error detail
+                # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Editor notification appears too often, not just at end.
+                if not flag:
+                    self._structure_report.add(self._INVALID_PLACEHOLDER)
                 return flag_position
         elif not flag_position:
             if rgx_editor.search(string) is not None:
-                # TODO if not flag sideeffect inject error code/error detail
+                # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Editor appears but not at end.
+                if not flag:
+                    self._structure_report.add(self._INVALID_PLACEHOLDER)
                 return flag_position
             elif rgx_editor_fuzzy.search(string) is not None:
-                # TODO if not flag sideeffect inject error code/error detail
+                # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Something that looks like Editor appears.
+                if not flag:
+                    self._structure_report.add(self._INVALID_PLACEHOLDER)
                 return flag_position
             else:
                 ## Editor notification legitimately absent.
@@ -182,8 +207,10 @@ class ProcessorAuthors(Processor):
         sane_length = 40
         authors = self.split(self._raw_string, join_first=True)
         flags = [len(a) <= sane_length for a in authors]
-        # TODO if not flag sideeffect inject error code/error detail
         flag = all(flags)
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
 
     def _cond_rogue_and(self):
@@ -191,8 +218,10 @@ class ProcessorAuthors(Processor):
         oxford_and = self._oxfordand
         count = self._raw_string.count
         flag = count(bare_and) == count(oxford_and)
-        # TODO if not flag sideeffect inject error code/error detail
+        # TODO injected error code/error detail is generic PLACEHOLDER
         ## Distinguish error for _cond_ok_oxford_comma
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
 
     @classmethod
