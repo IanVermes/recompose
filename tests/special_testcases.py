@@ -113,17 +113,13 @@ class ProcessorTestCase_Abstract(object):
         shortmsg = (f"***\n {self.Processor.__name__} - success rate: "
                     f"{success_percent:2.1f}%.")
         bad_strings = '\n'.join(are_bad)
-        longmsg = (f"{shortmsg}\n{bad_strings}\n***")
+        good_strings = '\n'.join(are_good)
+        longmsg = (f"{shortmsg}"
+                   f"\nFAILING:\n{bad_strings}"
+                   f"\nPASSING:\n{good_strings}\n***")
 
-        threshold_75 = int(len(self.strings) / 4 * 3), "75%"
-        threshold_50 = int(len(self.strings) / 2), "50%"
-        threshold_25 = int(len(self.strings) / 4), "25%"
-
-        self.assertGreaterEqual(success_percent, threshold_25[0], msg=longmsg)
-        self.assertGreaterEqual(success_percent, threshold_50[0], msg=longmsg)
-        self.assertGreaterEqual(success_percent, threshold_75[0], msg=longmsg)
-
-
+        for percent in [25, 50, 75, 85, 95, 99]:
+            self.assertGreaterEqual(success_percent, percent, msg=longmsg)
 
     def test_cls_method_split(self):
         self.fail("Overload this method.")
