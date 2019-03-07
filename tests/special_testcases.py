@@ -59,7 +59,7 @@ class ProcessorTestCase_Abstract(object):
 
             self.Processor(good_pre)
 
-    def test_method_hasGoodStructure_specific(self):
+    def test_method_isValid_specific(self):
         subtest_info = {"criteria": "", "processor": self.Processor.__name__}
         # Good result  - tuple, zeroth value is zero
         # Bad result  - tuple, zeroth value is not zero
@@ -71,7 +71,7 @@ class ProcessorTestCase_Abstract(object):
             arg = self.strucural_arg["good"]
             processor_obj = self.Processor(arg)
 
-            result_visible = processor_obj.hasGoodStructure()
+            result_visible = processor_obj.isValid()
             result_hidden = processor_obj.validation_results
 
             self.assertTrue(result_visible)
@@ -84,7 +84,7 @@ class ProcessorTestCase_Abstract(object):
             arg = self.strucural_arg["bad"]
             processor_obj = self.Processor(arg)
 
-            result_visible = processor_obj.hasGoodStructure()
+            result_visible = processor_obj.isValid()
             result_hidden = processor_obj.validation_results
 
             self.assertFalse(result_visible)
@@ -96,13 +96,13 @@ class ProcessorTestCase_Abstract(object):
                 self.assertIsInstance(hidden[0], int)
                 self.assertIsInstance(hidden[1], str)
 
-    def test_method_hasGoodStructure_general(self):
+    def test_method_isValid_general(self):
         are_good = []
         are_bad = []
         for string in self.strings:
 
             processor_obj = self.Processor(string)
-            result = processor_obj.hasGoodStructure()
+            result = processor_obj.isValid()
             reason = processor_obj.validation_results
             msg = f"  {result} -> {string}\n    {reason}"
             if result:

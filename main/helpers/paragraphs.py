@@ -69,11 +69,13 @@ class Processor(abc.ABC):
             raise ValueError("Empty string.")
         return raw_string
 
-    def hasGoodStructure(self):
+    @abc.abstractmethod
+    def isValid(self):
+        """Subclasses need documentation but can super() the implmentation."""
         try:
             report = self._structure_report
         except AttributeError:
-            self._hasGoodStructure()
+            self._isValid()
             report = self._structure_report
         # TODO Perhaps a different method called reportValiditiy or
         # reportStructure could handle the underlying set of tuple results.
@@ -91,7 +93,7 @@ class Processor(abc.ABC):
         return template.format(**kwargs)
 
     @abc.abstractmethod
-    def _hasGoodStructure(self):
+    def _isValid(self):
         pass
 
     @abc.abstractmethod
@@ -104,7 +106,7 @@ class Processor(abc.ABC):
         try:
             report = self._structure_report
         except AttributeError:
-            self._hasGoodStructure()
+            self._isValid()
             report = self._structure_report
         return results.union(report)
 
@@ -127,7 +129,7 @@ class ProcessorAuthors(Processor):
         validation_results
 
     Methods:
-        hasGoodStructure
+        isValid
         isEditor
 
     Class Methods:
@@ -136,6 +138,72 @@ class ProcessorAuthors(Processor):
     """
     _pre_attr_name = "pre_italic"
     _data_attrs = set("authors editors".split())
+
+    @classmethod
+    def strip_editor(cls, string):
+        """Strip the editorial notation from a string.
+
+        >>> string = "Roberts, Lilly-Ann, and J.R.R. Tolkein (eds),"
+        >>> ProcessorAuthors.strip_editor(string)
+        'Roberts, Lilly-Ann, and J.R.R. Tolkein '
+        >>> string = "Roberts, Lilly-Ann (ed.),"
+        >>> ProcessorAuthors.strip_editor(string)
+        'Roberts, Lilly-Ann '
+        """
+        base_editor_pattern = r"\(ed[\.s]\)"  # TODO CODE SMELL
+        pattern_is_positional_editor = rf"({base_editor_pattern}\,$)"
+        rgx_positional_editor = re.compile(pattern_is_positional_editor)
+        new_string = rgx_positional_editor.sub("", string)
+        return new_string
+
+    @classmethod
+    def split(cls, string, join_first=True):
+        """Split a string with authors and editorial notations into a list.
+
+        Kwargs:
+            join_first(bool): True, by default, the first author is returned as
+                a single string. Otherwise, the first author is a tuple composed
+                of a firstname(s) and surname, preserving the nascent structure
+                of the input string.
+
+        >>> string = "Roberts, Lilly-Ann, and J.R.R. Tolkein (eds),"
+        >>> ProcessorAuthors.split(string)
+        ['Lilly-Ann Roberts', 'J.R.R. Tolkein']
+        >>> ProcessorAuthors.split(string, join_first=False)
+        [('Lilly-Ann', 'Roberts'), 'J.R.R. Tolkein']
+        """
+        result = []
+        string = string.strip()
+        string = cls.strip_editor(string)
+        string = string.strip().strip(cls._COMMA)
+        # Split an author after the oxford comma, if there is one.
+        other_auths, *last = string.rsplit(cls._OXFORDAND, maxsplit=1)
+        # From the remainder split into firstauthor_name1, name2 and other auths
+        split_once = other_auths.split(cls._COMMASPACE, maxsplit=2)
+        first_surname, first_name, *other_auths = split_once
+        # Process the first author
+        first = first_name, first_surname
+        if join_first:
+            first = " ".join(first)
+        result.append(first)
+        # Process the remaining other_auths
+        if other_auths:
+            other_auths = other_auths.pop()
+            other_auths = other_auths.split(cls._COMMASPACE)
+        result = result + other_auths + last
+        return result
+
+    def isValid(self):
+        """Boolean check: does the string have the editorial notation.
+
+        >>> wrong = ProcessorAuthors("Wrong, Borris L. ed,")
+        >>> wrong.isValid()
+        False
+        >>> write = ProcessorAuthors("Write, Borris L. (ed.),")
+        >>> write.isValid()
+        True
+        """
+        return super().isValid()
 
     def isEditor(self):
         """Boolean check: does the string have the editorial notation.
@@ -154,7 +222,7 @@ class ProcessorAuthors(Processor):
             flag = self._has_editors
         return flag
 
-    def _hasGoodStructure(self):
+    def _isValid(self):
         self._structure_report = set()
 
         main_flag = self._maincond_count_commas()
@@ -174,7 +242,7 @@ class ProcessorAuthors(Processor):
             return flag
 
     def _assign_values(self):
-        if self.hasGoodStructure():
+        if self.isValid():
             if self.isEditor():
                 self.editors = self.split(self._raw_string)
                 self.authors = list()
@@ -288,67 +356,13 @@ class ProcessorAuthors(Processor):
             self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
 
-    @classmethod
-    def strip_editor(cls, string):
-        """Strip the editorial notation from a string.
-
-        >>> string = "Roberts, Lilly-Ann, and J.R.R. Tolkein (eds),"
-        >>> ProcessorAuthors.strip_editor(string)
-        'Roberts, Lilly-Ann, and J.R.R. Tolkein '
-        >>> string = "Roberts, Lilly-Ann (ed.),"
-        >>> ProcessorAuthors.strip_editor(string)
-        'Roberts, Lilly-Ann '
-        """
-        base_editor_pattern = r"\(ed[\.s]\)"  # TODO CODE SMELL
-        pattern_is_positional_editor = rf"({base_editor_pattern}\,$)"
-        rgx_positional_editor = re.compile(pattern_is_positional_editor)
-        new_string = rgx_positional_editor.sub("", string)
-        return new_string
-
-    @classmethod
-    def split(cls, string, join_first=True):
-        """Split a string with authors and editorial notations into a list.
-
-        Kwargs:
-            join_first(bool): True, by default, the first author is returned as
-                a single string. Otherwise, the first author is a tuple composed
-                of a firstname(s) and surname, preserving the nascent structure
-                of the input string.
-
-        >>> string = "Roberts, Lilly-Ann, and J.R.R. Tolkein (eds),"
-        >>> ProcessorAuthors.split(string)
-        ['Lilly-Ann Roberts', 'J.R.R. Tolkein']
-        >>> ProcessorAuthors.split(string, join_first=False)
-        [('Lilly-Ann', 'Roberts'), 'J.R.R. Tolkein']
-        """
-        result = []
-        string = string.strip()
-        string = cls.strip_editor(string)
-        string = string.strip().strip(cls._COMMA)
-        # Split an author after the oxford comma, if there is one.
-        other_auths, *last = string.rsplit(cls._OXFORDAND, maxsplit=1)
-        # From the remainder split into firstauthor_name1, name2 and other auths
-        split_once = other_auths.split(cls._COMMASPACE, maxsplit=2)
-        first_surname, first_name, *other_auths = split_once
-        # Process the first author
-        first = first_name, first_surname
-        if join_first:
-            first = " ".join(first)
-        result.append(first)
-        # Process the remaining other_auths
-        if other_auths:
-            other_auths = other_auths.pop()
-            other_auths = other_auths.split(cls._COMMASPACE)
-        result = result + other_auths + last
-        return result
-
 
 class ProcessorTitle(Processor):
     """Processor for titular data from a string or PreProcessed object."""
     _pre_attr_name = "italic"
     _data_attrs = set("title series".split())
 
-    def _hasGoodStructure(self):
+    def _isValid(self):
         self.__structure_result = None
         # cond_series_info True PASS
         # cond_series_info False PASS
@@ -366,7 +380,7 @@ class ProcessorMeta(Processor):
     _data_attrs = set(("illustrator translator publisher publplace year "
                        "pages price isbn issn").split())
 
-    def _hasGoodStructure(self):
+    def _isValid(self):
         self.__structure_result = None
         # cond_section_count < 2 FAIL
         # cond_section_count == 4 PASS
