@@ -358,12 +358,63 @@ class ProcessorAuthors(Processor):
 
 
 class ProcessorTitle(Processor):
-    """Processor for titular data from a string or PreProcessed object."""
+    """Processor for titular data from a string or PreProcessed object.
+
+    POSTCONDITION: value assignment to data attributes is dependent on the
+    validity of the argument string/PreProcessed object, otherwise the
+    attributes take a fill value.
+
+    Attr:
+        title
+        series
+        validation_results
+
+    Methods:
+        isValid
+        isSeries
+
+    Class Methods:
+        split
+    """
     _pre_attr_name = "italic"
     _data_attrs = set("title series".split())
 
+    @classmethod
+    def split(cls, string):
+        """Split a string with a title (and series) into a two member list.
+
+        >>> no_series = "A noteworthy subject, with a subclause."
+        >>> ProcessorTitle.split(no_series)
+        ['A noteworthy subject, with a subclause', '']
+        >>> with_series = "Illustrated puffins. "
+        >>> ProcessorTitle.split(with_series)
+        ['Illustrated puffins', 'Some journal: Volume III]
+        """
+        raise NotImplementedError()
+
+
+    def isValid(self):
+        """Boolean check: does object pass validation?
+
+        >>> wrong = ProcessorTitle("Important subject matter,")
+        >>> wrong.isValid()
+        False
+        >>> right = ProcessorTitle("Superior debugging 101.")
+        >>> right.isValid()
+        True
+
+        >>> complex_wrong = ProcessorTile("Journal: Volume XI. Some title.")
+        >>> complex_wrong.isValid()
+        False
+        >>> complex_right = ProcessorTile("Some title. Journal: Volume XI.")
+        >>> complex_right.isValid()
+        True
+        """
+        return super().isValid()
+
     def _isValid(self):
         self.__structure_result = None
+        # TODO
         # cond_series_info True PASS
         # cond_series_info False PASS
 
@@ -372,6 +423,41 @@ class ProcessorTitle(Processor):
         # cond_colon_preceded_by_fullstop (True)
         # cond_volume_preceded_by_fullstop (True)
         # cond_volume_ambiguity?
+
+        # TODO - taken from ProcessorAuthors
+        # self._structure_report = set()
+        #
+        # main_flag = self._maincond_count_commas()
+        # if main_flag:
+        #     prefix = self._CONDITIONAL_METHOD
+        #     cond_methods = [getattr(self, name) for name in dir(self)
+        #                     if name.startswith(prefix)]
+        #     iter_bool = (m() for m in cond_methods)
+        #     secondary_flag = all([b for b in iter_bool if b is not None])
+        #     flag = secondary_flag and main_flag
+        # else:
+        #     flag = main_flag
+        # if flag:
+        #     self._structure_report.add(self._VALID_REPORT)
+        #     return flag
+        # else:
+        #     return flag
+
+    def isSeries(self):
+        """Boolean check: does object have series info?
+
+        >>> without_series = ProcessorTitle("Superior debugging 101.")
+        >>> without_series.isSeries()
+        False
+
+        >>> with_series = ProcessorTile("Hope: a story. Some Journal: Volume I.")
+        >>> complex_wrong.isSeries()
+        True
+        """
+        raise NotImplementedError()
+
+    def _assign_values(self):
+        raise NotImplementedError()
 
 
 class ProcessorMeta(Processor):
