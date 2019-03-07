@@ -14,7 +14,7 @@ class ProcessorTestCase_Abstract(object):
     >>> class NewTestCase(ProcessorTestCase_Abstract, unittest.TestCase): pass
     """
 
-    def test_instantiation_general(self):
+    def test_instantiation_with_string(self):
         Processor = self.Processor
 
         with self.subTest(criteria="empty string"):
@@ -25,7 +25,7 @@ class ProcessorTestCase_Abstract(object):
             with self.assertRaises(TypeError):
                 obj = Processor(42)
 
-    def test_instantiation_pre(self):
+    def test_instantiation_with_PreProcessed(self):
         attr_in_question = self.group
         bad_config = self.mock_config.copy()
         bad_config.pop(attr_in_question)
@@ -33,7 +33,11 @@ class ProcessorTestCase_Abstract(object):
         wrong_value = 53
         wrong_config[attr_in_question] = wrong_value
 
-        with self.subTest(criteria=f"Bad PreProcessed - no attr: {attr_in_question}"):
+        Processor = self.Processor
+
+        crit = (f"{Processor.__name__} using a bad PreProcessed - no attr: "
+                f"{attr_in_question}")
+        with self.subTest(criteria=crit):
             bad_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
             bad_pre.configure_mock(**bad_config)
             delattr(bad_pre, attr_in_question)
@@ -41,23 +45,26 @@ class ProcessorTestCase_Abstract(object):
                              msg="Precondition")
 
             with self.assertRaises(TypeError):
-                self.Processor(bad_pre)
+                Processor(bad_pre)
 
-        with self.subTest(criteria=f"Bad PreProcessed - attr value wrongtype"):
+        crit = (f"{Processor.__name__} using a bad PreProcessed - attr value "
+                "wrongtype")
+        with self.subTest(criteria=crit):
             wrong_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
             wrong_pre.configure_mock(**wrong_config)
             self.assertHasAttr(wrong_pre, attr_in_question, msg="Precondition")
             self.assertEqual(getattr(wrong_pre, attr_in_question), wrong_value)
 
             with self.assertRaises(TypeError):
-                self.Processor(wrong_pre)
+                Processor(wrong_pre)
 
-        with self.subTest(criteria=f"Good PreProcessed"):
+        crit = (f"{Processor.__name__} using a good PreProcessed")
+        with self.subTest(criteria=crit):
             good_pre = self.MockPreProcessed("Some XML paragraph <w:p>")
             good_pre.configure_mock(**self.mock_config)
             self.assertHasAttr(good_pre, attr_in_question, msg="Precondition")
 
-            self.Processor(good_pre)
+            Processor(good_pre)
 
     def test_method_isValid_specific(self):
         subtest_info = {"criteria": "", "processor": self.Processor.__name__}

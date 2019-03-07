@@ -133,7 +133,6 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
 
             with self.subTest(criteria="specific", substring=editor_substring):
                 processor_obj = self.Processor(raw_string)
-                bool(editor_substring)
                 self.assertEqual(processor_obj.isEditor(),
                                  bool(editor_substring),
                                  msg="Precondtion")
@@ -150,11 +149,11 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
                 processor_obj = self.Processor(raw_string)
 
                 if processor_obj.isValid():
-                    self.check_author_editor_attr_assignemnt(processor_obj)
+                    self.check_author_editor_attr_assignment(processor_obj)
                 else:
                     continue  # Ignore badly structured raw strings.
 
-    def check_author_editor_attr_assignemnt(self, processor_obj):
+    def check_author_editor_attr_assignment(self, processor_obj):
         if processor_obj.isEditor():
             self.assertGreaterEqual(len(processor_obj.editors), 1)
             self.assertEqual(len(processor_obj.authors), 0)
@@ -266,7 +265,6 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
             self.assertListEqual(expected, result)
 
 
-@unittest.skip("TestCase missing abstract test")
 class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
     @classmethod
@@ -287,6 +285,86 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
                                     "Approaches to an Integrated History of "
                                     "the Holocaust: Social History, "
                                     "Representation, Theory.")
+
+        cls.series_arg = {}
+        cls.series_arg[True] = (cls.strucural_arg["good"])
+        cls.series_arg[False] = ("An Early History of Compassion: Emotion "
+                                 "and Imagination in Hellenistic Judaism.")
+
+    def test_assignment_to_title_and_series(self):
+        for series_flag, raw_string in self.series_arg.items():
+
+            with self.subTest(criteria="specific", has_series=series_flag):
+                processor_obj = self.Processor(raw_string)
+                self.assertEqual(processor_obj.isSeries(),
+                                 series_flag,
+                                 msg="Precondtion")
+
+                # Test1: both attributes is a string even if empty
+                is_string = all([isinstance(processor_obj.title, str),
+                                 isinstance(processor_obj.series, str)])
+                self.assertTrue(is_string)
+
+                # Test2: either attribute is populated
+                is_populated = any([len(processor_obj.title),
+                                    len(processor_obj.series)])
+                self.assertTrue(is_populated, msg=f"raw_string = {raw_string}")
+
+                # Test3: the correct list is populated:
+                self.check_title_series_attr_assignment(processor_obj)
+
+        with self.subTest(criteria="generic"):
+            for raw_string in self.strings:
+                processor_obj = self.Processor(raw_string)
+
+                if processor_obj.isValid():
+                    self.check_title_series_attr_assignment(processor_obj)
+                else:
+                    continue  # Ignore badly structured raw strings.
+
+    def check_author_editor_attr_assignemnt(self, processor_obj):
+        if processor_obj.isSeries():
+            self.assertGreaterEqual(len(processor_obj.title), 1)
+            self.assertGreaterEqual(len(processor_obj.series), 1)
+        else:
+            self.assertGreaterEqual(len(processor_obj.title), 1)
+            self.assertEqual(len(processor_obj.series), 0)
+
+    def test_method_isSeries(self):
+        for expected_bool, raw_string in self.series_arg.items():
+            with self.subTest(criteria="specific"):
+
+                processor_obj = self.Processor(raw_string)
+
+                self.assertEqual(processor_obj.isSeries(), expected_bool)
+
+    def test_cls_method_split(self):
+        cls_method = self.Processor.split
+        with self.subTest(criteria="split - title + series"):
+            string = self.strucural_arg["good"]
+            expected = [("New Approaches to an Integrated History of the "
+                         "Holocaust: Social History, Representation, Theory"),
+                         "Lessons and Legacies: Volume XIII"]
+
+            result = cls_method(string)
+
+            self.assertListEqual(expected, result)
+
+        with self.subTest(criteria="split - title + series, bad structure"):
+            string = self.strucural_arg["bad"]
+            expected = [string.strip().strip(".").strip(), ""]
+
+            result = cls_method(string)
+
+            self.assertListEqual(expected, result)
+
+        with self.subTest(criteria="split - title only"):
+            string = self.series_arg[False]
+            expected = [string.strip().strip(".").strip(), ""]
+
+            result = cls_method(string)
+
+            self.assertListEqual(expected, result)
 
 
 @unittest.skip("For now")
