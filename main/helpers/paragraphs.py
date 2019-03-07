@@ -152,7 +152,6 @@ class ProcessorAuthors(Processor):
                 self.editors = list()
 
 
-
     def _maincond_count_commas(self):
         count_comma = self.__count_commas()
         flag = count_comma >= 2
@@ -202,35 +201,38 @@ class ProcessorAuthors(Processor):
         rgx_positional_editor = re.compile(pattern_is_positional_editor)  # TODO CODE SMELL
 
         string = self._raw_string
-        flag_position = rgx_positional_editor.search(string) is not None
-        flag_count = len(rgx_editor.findall(string)) == 1
+        flag_position = rgx_positional_editor.search(string) is not None  # TODO CODE SMELL
+        flag_count_is_one = len(rgx_editor.findall(string)) == 1
         # Save calculation to assignment for isEditor to call.
-        self._has_editors = flag_position
+        self._has_editors = flag_position and flag_count_is_one
         # Whether there is an editor pattern at the end or not does not rule out other
         # mistakes, hence check:
+        structurally_sound = True
+        structurally_flawed = False
+
         if flag_position:
-            if flag_count:
+            if flag_count_is_one:
                 ## Editor notification legitimately present.
-                return flag_position
+                return structurally_sound
             else:
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Editor notification appears too often, not just at end.
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
-                return flag_position
+                return structurally_flawed
         elif not flag_position:
             if rgx_editor.search(string) is not None:
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Editor appears but not at end.
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
-                return flag_position
+                return structurally_flawed
             elif rgx_editor_fuzzy.search(string) is not None:
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 ## Something that looks like Editor appears.
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
-                return flag_position
+                return structurally_flawed
             else:
                 ## Editor notification legitimately absent.
-                return flag_position
+                return structurally_sound
 
     def _cond_auth_length(self):
         sane_length = 40
