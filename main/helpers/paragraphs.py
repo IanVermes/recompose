@@ -82,6 +82,13 @@ class Processor(abc.ABC):
         else:
             return self._VALID_REPORT in report
 
+    def __repr__(self):
+        template =  "<{name} raw:\'{raw}\' at {hexid}>"
+        kwargs = {"name": self.__class__.__name__,
+                  "raw": self._raw_string,
+                  "hexid": hex(id(self))}
+        return template.format(**kwargs)
+
     @abc.abstractmethod
     def _hasGoodStructure(self):
         pass
