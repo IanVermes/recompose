@@ -83,7 +83,8 @@ class Processor(abc.ABC):
             return self._VALID_REPORT in report
 
     def __repr__(self):
-        template =  "<{name} raw:\'{raw}\' at {hexid}>"
+        """In general: <classname raw: ... at 0x...>."""
+        template = "<{name} raw:\'{raw}\' at {hexid}>"
         kwargs = {"name": self.__class__.__name__,
                   "raw": self._raw_string,
                   "hexid": hex(id(self))}
@@ -114,11 +115,38 @@ class Processor(abc.ABC):
 
 
 class ProcessorAuthors(Processor):
-    """Processor for authorial data from a string or PreProcessed object."""
+    """Processor for authorial data from a string or PreProcessed object.
+
+    POSTCONDITION: value assignment to data attributes is dependent on the
+    validity of the argument string/PreProcessed object, otherwise the
+    attributes take a fill value.
+
+    Attr:
+        authors
+        editors
+        validation_results
+
+    Methods:
+        hasGoodStructure
+        isEditor
+
+    Class Methods:
+        split
+        strip_editor
+    """
     _pre_attr_name = "pre_italic"
     _data_attrs = set("authors editors".split())
 
     def isEditor(self):
+        """Boolean check: does the string have the editorial notation.
+
+        >>> roberts = ProcessorAuthors("Roberts, Lilly-Ann,")
+        >>> roberts.isEditor()
+        False
+        >>> poe = ProcessorAuthors("Allan Poe, Edgar (ed.),")
+        >>> poe.isEditor()
+        True
+        """
         try:
             flag = self._has_editors
         except AttributeError:
@@ -146,18 +174,16 @@ class ProcessorAuthors(Processor):
             return flag
 
     def _assign_values(self):
-        use_fill = self.hasGoodStructure()
-        if use_fill:
-            for attr in self._data_attrs:
-                super().__setattr__(attr, list())
-        else:
+        if self.hasGoodStructure():
             if self.isEditor():
                 self.editors = self.split(self._raw_string)
                 self.authors = list()
             else:
                 self.authors = self.split(self._raw_string)
                 self.editors = list()
-
+        else:
+            for attr in self._data_attrs:
+                super().__setattr__(attr, list())
 
     def _maincond_count_commas(self):
         count_comma = self.__count_commas()
@@ -264,6 +290,15 @@ class ProcessorAuthors(Processor):
 
     @classmethod
     def strip_editor(cls, string):
+        """Strip the editorial notation from a string.
+
+        >>> string = "Roberts, Lilly-Ann, and J.R.R. Tolkein (eds),"
+        >>> ProcessorAuthors.strip_editor(string)
+        'Roberts, Lilly-Ann, and J.R.R. Tolkein '
+        >>> string = "Roberts, Lilly-Ann (ed.),"
+        >>> ProcessorAuthors.strip_editor(string)
+        'Roberts, Lilly-Ann '
+        """
         base_editor_pattern = r"\(ed[\.s]\)"  # TODO CODE SMELL
         pattern_is_positional_editor = rf"({base_editor_pattern}\,$)"
         rgx_positional_editor = re.compile(pattern_is_positional_editor)
@@ -272,6 +307,20 @@ class ProcessorAuthors(Processor):
 
     @classmethod
     def split(cls, string, join_first=True):
+        """Split a string with authors and editorial notations into a list.
+
+        Kwargs:
+            join_first(bool): True, by default, the first author is returned as
+                a single string. Otherwise, the first author is a tuple composed
+                of a firstname(s) and surname, preserving the nascent structure
+                of the input string.
+
+        >>> string = "Roberts, Lilly-Ann, and J.R.R. Tolkein (eds),"
+        >>> ProcessorAuthors.split(string)
+        ['Lilly-Ann Roberts', 'J.R.R. Tolkein']
+        >>> ProcessorAuthors.split(string, join_first=False)
+        [('Lilly-Ann', 'Roberts'), 'J.R.R. Tolkein']
+        """
         result = []
         string = string.strip()
         string = cls.strip_editor(string)

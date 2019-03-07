@@ -140,8 +140,8 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
 
                 # Test1: either attribute list is populated
                 is_populated = any([len(processor_obj.authors),
-                                    len(processor_obj.authors)])
-                self.assertTrue(is_populated)
+                                    len(processor_obj.editors)])
+                self.assertTrue(is_populated, msg=f"raw_string = {raw_string}")
                 # Test2: the correct list is populated:
                 self.check_author_editor_attr_assignemnt(processor_obj)
 
@@ -149,7 +149,10 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
             for raw_string in self.strings:
                 processor_obj = self.Processor(raw_string)
 
-                self.check_author_editor_attr_assignemnt(processor_obj)
+                if processor_obj.hasGoodStructure():
+                    self.check_author_editor_attr_assignemnt(processor_obj)
+                else:
+                    continue  # Ignore badly structured raw strings.
 
     def check_author_editor_attr_assignemnt(self, processor_obj):
         if processor_obj.isEditor():
