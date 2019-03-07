@@ -36,13 +36,13 @@ class Processor(abc.ABC):
     _OXFORDAND = _OXFORDCOMMA + " "
     _VALID_REPORT = (0, "")
     _INVALID_PLACEHOLDER = (1, "DETAIL TO ADD TO EXCEPTION STRING")  # TODO
+    _CONDITIONAL_METHOD = "_cond"
 
     def __init__(self, source):
         self._oktype = PreProcessed
         self._raw_string = self._init_precondition(source)
         for attr in self._data_attrs:
             super().__setattr__(attr, None)
-        self.conditional_method_prefix = "_cond"
         self._assign_values()
 
     def _init_precondition(self, source):
@@ -194,7 +194,7 @@ class ProcessorAuthors(Processor):
         return result
 
     def isValid(self):
-        """Boolean check: does the string have the editorial notation.
+        """Boolean check: does object pass validation?
 
         >>> wrong = ProcessorAuthors("Wrong, Borris L. ed,")
         >>> wrong.isValid()
@@ -205,8 +205,27 @@ class ProcessorAuthors(Processor):
         """
         return super().isValid()
 
+    def _isValid(self):
+        self._structure_report = set()
+
+        main_flag = self._maincond_count_commas()
+        if main_flag:
+            prefix = self._CONDITIONAL_METHOD
+            cond_methods = [getattr(self, name) for name in dir(self)
+                            if name.startswith(prefix)]
+            iter_bool = (m() for m in cond_methods)
+            secondary_flag = all([b for b in iter_bool if b is not None])
+            flag = secondary_flag and main_flag
+        else:
+            flag = main_flag
+        if flag:
+            self._structure_report.add(self._VALID_REPORT)
+            return flag
+        else:
+            return flag
+
     def isEditor(self):
-        """Boolean check: does the string have the editorial notation.
+        """Boolean check: does the object have the editorial notation?
 
         >>> roberts = ProcessorAuthors("Roberts, Lilly-Ann,")
         >>> roberts.isEditor()
@@ -221,25 +240,6 @@ class ProcessorAuthors(Processor):
             self._cond_editors()
             flag = self._has_editors
         return flag
-
-    def _isValid(self):
-        self._structure_report = set()
-
-        main_flag = self._maincond_count_commas()
-        if main_flag:
-            prefix = self.conditional_method_prefix
-            cond_methods = [getattr(self, name) for name in dir(self)
-                            if name.startswith(prefix)]
-            iter_bool = (m() for m in cond_methods)
-            secondary_flag = all([b for b in iter_bool if b is not None])
-            flag = secondary_flag and main_flag
-        else:
-            flag = main_flag
-        if flag:
-            self._structure_report.add(self._VALID_REPORT)
-            return flag
-        else:
-            return flag
 
     def _assign_values(self):
         if self.isValid():
