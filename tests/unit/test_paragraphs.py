@@ -128,8 +128,38 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
         cls.editorial_arg["(ed.),"] = "Alexandru, Florian (ed.),"
         cls.editorial_arg[""] = cls.first_author
 
+    def test_assignement_to_editor_or_author_attr(self):
+        for editor_substring, raw_string in self.editorial_arg.items():
 
-    def test_mthod_isEditor(self):
+            with self.subTest(criteria="specific", substring=editor_substring):
+                processor_obj = self.Processor(raw_string)
+                bool(editor_substring)
+                self.assertEqual(processor_obj.isEditor(),
+                                 bool(editor_substring),
+                                 msg="Precondtion")
+
+                # Test1: either attribute list is populated
+                is_populated = any([len(processor_obj.authors),
+                                    len(processor_obj.authors)])
+                self.assertTrue(is_populated)
+                # Test2: the correct list is populated:
+                self.check_author_editor_attr_assignemnt(processor_obj)
+
+        with self.subTest(criteria="generic"):
+            for raw_string in self.strings:
+                processor_obj = self.Processor(raw_string)
+
+                self.check_author_editor_attr_assignemnt(processor_obj)
+
+    def check_author_editor_attr_assignemnt(self, processor_obj):
+        if processor_obj.isEditor():
+            self.assertGreaterEqual(len(processor_obj.editors), 1)
+            self.assertEqual(len(processor_obj.authors), 0)
+        else:
+            self.assertGreaterEqual(len(processor_obj.authors), 1)
+            self.assertEqual(len(processor_obj.editors), 0)
+
+    def test_method_isEditor(self):
         for editor_suffix in ["(ed.),", "(eds),"]:
             msg = f"isEditor - positive specific {editor_suffix}"
             with self.subTest(criteria=msg):
@@ -150,7 +180,6 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
 
             self.assertFalse(flag)
             self.assertIs(flag, False)
-
 
     def test_cls_method_strip_editor(self):
         cls_method = self.Processor.strip_editor
