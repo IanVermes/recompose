@@ -386,7 +386,9 @@ class ProcessorTitle(Processor):
                              Processor._EXCLAMATIONMARK}
     _SERIES_SUBSTRINGS = {"volume", "vol"}
     _RGX_COLON_VOLUME = re.compile(r"(:\s*[Vv]ol)")
-    _RGX_SERIES_ROMANNUMERALS = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
+    _RGX_SERIES_ROMANDIGITS = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
+    _RGX_SERIES_ARABICDIGITS = re.compile(r"(\:\svolume\s[1-9][0-9]{1,12}\.?)")
+    _RGX_RAW_ROMANNUMERALS = re.compile(r"(volume\s[ivxlcm]{1,13}\.?)")
 
     @classmethod
     def split(cls, string):
@@ -532,13 +534,16 @@ class ProcessorTitle(Processor):
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
             return flag
 
-    def _cond_seriesinfo_volume_proceded_by_roman_numerals(self, series, **_):
+    def _cond_seriesinfo_volume_proceded_by_numerals(self, series, **_):
         if not len(series):
             return True
         else:
             series = series.lower()
-            rgx_volume_roman = self._RGX_SERIES_ROMANNUMERALS
-            flag = bool(rgx_volume_roman.search(series))
+            rgx_volume_roman = self._RGX_SERIES_ROMANDIGITS
+            rgx_volume_arabic = self._RGX_SERIES_ARABICDIGITS
+            flag_roman = bool(rgx_volume_roman.search(series))
+            flag_arabic = bool(rgx_volume_arabic.search(series))
+            flag = flag_roman or flag_arabic
             if not flag:
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
             return flag
