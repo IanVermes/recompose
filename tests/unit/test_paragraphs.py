@@ -340,7 +340,7 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
 
     def test_method_isSeries_general(self):
         tally = defaultdict(int)
-        expect_series_count = 1
+        expect_series_count = 2  # Expect 2 raw strings with legit seriesinfo
 
         for raw_string in self.strings:
             processor_obj = self.Processor(raw_string)
