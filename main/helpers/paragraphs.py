@@ -37,8 +37,10 @@ class Processor(abc.ABC):
     _FULLSTOP = "."
     _QUESTIONMARK = "?"
     _EXCLAMATIONMARK = "!"
+    _COLON = ":"
     _VALID_REPORT = (0, "")
-    _INVALID_PLACEHOLDER = (1, "DETAIL TO ADD TO EXCEPTION STRING")  # TODO
+    _WARNING_PLACEHOLDER = (1, "WARNING TO ADD TO EXCEPTION STRING")  # TODO
+    _INVALID_PLACEHOLDER = (2, "DETAIL TO ADD TO EXCEPTION STRING")  # TODO
     _CONDITIONAL_METHOD = "_cond"
 
     def __init__(self, source):
@@ -82,10 +84,8 @@ class Processor(abc.ABC):
             report = self._structure_report
         # TODO Perhaps a different method called reportValiditiy or
         # reportStructure could handle the underlying set of tuple results.
-        if len(report) > 1:
-            return False
-        else:
-            return self._VALID_REPORT in report
+        # TODO How should I worry about warning reports?
+        return self._VALID_REPORT in report
 
     def __repr__(self):
         """In general: <classname raw: ... at 0x...>."""
