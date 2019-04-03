@@ -143,7 +143,7 @@ class Test_ProcessorAuthor_Class(ProcessorTestCase_Abstract, ProcessorTestCase_G
                                     len(processor_obj.editors)])
                 self.assertTrue(is_populated, msg=f"raw_string = {raw_string}")
                 # Test2: the correct list is populated:
-                self.check_author_editor_attr_assignemnt(processor_obj)
+                self.check_author_editor_attr_assignment(processor_obj)
 
         with self.subTest(criteria="generic"):
             for raw_string in self.strings:
