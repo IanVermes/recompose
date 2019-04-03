@@ -386,9 +386,9 @@ class ProcessorTitle(Processor):
         >>> no_series = "A noteworthy subject, with a subclause."
         >>> ProcessorTitle.split(no_series)
         ['A noteworthy subject, with a subclause', '']
-        >>> with_series = "Illustrated puffins. "
+        >>> with_series = "Illustrated puffins. Some journal: Volume III"
         >>> ProcessorTitle.split(with_series)
-        ['Illustrated puffins', 'Some journal: Volume III]
+        ['Illustrated puffins', 'Some journal: Volume III']
         """
         raise NotImplementedError()
 
