@@ -430,9 +430,9 @@ class ProcessorTitle(Processor):
 
     def _isValid(self):
         # TODO - ideas
+        # False <- isSeries() -> True
         # cond_string_endswith_punctuation (True False)  ## maincond!
         # cond_title_endswith_punctuation (True, False)
-        # cond_title_no_volume (True, False)
         # cond_seriesinfo_endswith_fulltstop (True)
         # cond_seriesinfo_colon_count (True)
         # cond_seriesinfo_colon_proceded_by_fullstop (True)
@@ -446,10 +446,16 @@ class ProcessorTitle(Processor):
 
         main_flag = self._maincond_ends_with_punctuation()
         if main_flag:
+            # Split according to the title/seriesinfo rules.
+            title, series = self.split(self._raw_string)
+            kwargs = {"rawstring": self._raw_string,
+                      "title": title,
+                      "series": series}
+
             prefix = self._CONDITIONAL_METHOD
             cond_methods = [getattr(self, name) for name in dir(self)
                             if name.startswith(prefix)]
-            iter_bool = (m() for m in cond_methods)
+            iter_bool = (m(**kwargs) for m in cond_methods)
             secondary_flag = all([b for b in iter_bool if b is not None])
             flag = secondary_flag and main_flag
         else:
@@ -467,6 +473,64 @@ class ProcessorTitle(Processor):
         if not flag:
             self._structure_report.add(self._INVALID_PLACEHOLDER)
         return flag
+
+    def _cond_title_endswith_punctuation(self, title, **_):
+        if title.endswith(self._FULLSTOP):
+            msg = ("The precondition of this method is that the argument has "
+                   f"had any fullstops stripped. Got: {repr(title)}")
+            raise ValueError(msg)
+        lastchar_i = len(title) - 1
+        lastchar = self._raw_string[lastchar_i]
+        nextchar = self._raw_string[lastchar_i + 1]
+        assert lastchar == title[lastchar_i]
+        flag_last = lastchar in self._TERMINAL_PUNCTUATION
+        flag_despite_stripped_fullstop = nextchar == self._FULLSTOP
+        flag = flag_last or flag_despite_stripped_fullstop
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
+        return flag
+
+    def _cond_string_has_volume_but_is_not_series(self, rawstring, **_):
+        """Nonboolean check - warns against ambiguous strings.
+
+        Adds a warning to the validation report if there is an ambiguity over
+        the presence of vol or volume when the raw string does not satisfy
+        the isSeries() condition.
+        """
+        if self.isSeries():
+            return
+        else:
+            rawstring = rawstring.lower()
+            for substring in self._SERIES_SUBSTRINGS:
+                if substring in rawstring:
+                    warn = True
+                    break
+            else:
+                warn = False
+            if warn:
+                # TODO injected error code/error detail is generic PLACEHOLDER
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return
+    #
+    #
+    # def _cond_seriesinfo_endswith_fulltstop(self, series, **_):
+    #     pass
+    #
+    # def _cond_seriesinfo_colon_count(self, series, **_):
+    #     pass
+    #
+    # def _cond_seriesinfo_colon_proceded_by_fullstop(self, series, **_):
+    #     pass
+    #
+    # def _cond_seriesinfo_colon_proceded_by_volume(self, series, **_):
+    #     pass
+    #
+    # def cond_seriesinfo_volume_proceded_by_roman_numerals(self, series, **_):
+    #     pass
+    #
+    # def _cond_seriesinfo_volume_abbreviated(self, series, **_):
+    #     pass
 
     def isSeries(self):
         """Boolean check: does object have series info?
