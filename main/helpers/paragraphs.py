@@ -429,21 +429,7 @@ class ProcessorTitle(Processor):
         return super().isValid()
 
     def _isValid(self):
-        # TODO - ideas
-        # False <- isSeries() -> True
-        # cond_string_endswith_punctuation (True False)  ## maincond!
-        # cond_title_endswith_punctuation (True, False)
-        # cond_seriesinfo_endswith_fulltstop (True)
-        # cond_seriesinfo_colon_count (True)
-        # cond_seriesinfo_colon_proceded_by_fullstop (True)
-        # cond_seriesinfo_colon_proceded_by_volume (True)
-        # cond_seriesinfo_volume_proceded_by_roman_numerals (True)
-        # cond_seriesinfo_volume_abbreviated (True)
-        # cond_sting_has_volume_but_is_not_series (False) ## really just to warn of ambiguity  ## No bool
-
-        # TODO - taken from ProcessorAuthors
         self._structure_report = set()
-
         main_flag = self._maincond_ends_with_punctuation()
         if main_flag:
             # Split according to the title/seriesinfo rules.
@@ -510,27 +496,60 @@ class ProcessorTitle(Processor):
                 warn = False
             if warn:
                 # TODO injected error code/error detail is generic PLACEHOLDER
-                self._structure_report.add(self._INVALID_PLACEHOLDER)
+                self._structure_report.add(self._WARNING_PLACEHOLDER)
             return
-    #
-    #
-    # def _cond_seriesinfo_endswith_fulltstop(self, series, **_):
-    #     pass
-    #
-    # def _cond_seriesinfo_colon_count(self, series, **_):
-    #     pass
-    #
-    # def _cond_seriesinfo_colon_proceded_by_fullstop(self, series, **_):
-    #     pass
-    #
-    # def _cond_seriesinfo_colon_proceded_by_volume(self, series, **_):
-    #     pass
-    #
-    # def cond_seriesinfo_volume_proceded_by_roman_numerals(self, series, **_):
-    #     pass
-    #
-    # def _cond_seriesinfo_volume_abbreviated(self, series, **_):
-    #     pass
+
+    def _cond_seriesinfo_endswith_fulltstop(self, series, **_):
+        if not len(series):
+            return True
+        else:
+            if series.endswith(self._FULLSTOP):
+                msg = ("The precondition of this method is that the argument "
+                       f"has had any fullstops stripped. Got: {repr(series)}")
+                raise ValueError(msg)
+            lastchar_series = series[-1]
+            penultimatechar_raw = self._raw_string[-2]
+            if not lastchar_series == penultimatechar_raw:
+                msg = f"Something went wrong with comparing the last character "
+                "of {series} ({lastchar_series}) and the penultimate character "
+                "of the rawstring ({penultimatechar_raw})."
+                raise RuntimeError(msg)
+            lastchar_raw = self._raw_string[-1]
+            flag = lastchar_raw == self._FULLSTOP
+            if not flag:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return flag
+
+    def _cond_seriesinfo_colon_count(self, series, **_):
+        if not len(series):
+            return True
+        else:
+            count = series.count(self._COLON)
+            flag = count >= 1
+            if not flag:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return flag
+
+    def _cond_seriesinfo_volume_proceded_by_roman_numerals(self, series, **_):
+        if not len(series):
+            return True
+        else:
+            series = series.lower()
+            rgx_volume_roman = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
+            flag = bool(rgx_volume_roman.search(series))
+            if not flag:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return flag
+
+    def _cond_seriesinfo_volume_abbreviated(self, series, **_):
+        if not len(series):
+            return True
+        else:
+            series = series.lower()
+            flag = all([sub in series for sub in self._SERIES_SUBSTRINGS])
+            if not flag:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return flag
 
     def isSeries(self):
         """Boolean check: does object have series info?
