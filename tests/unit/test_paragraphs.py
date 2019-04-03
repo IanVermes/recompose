@@ -18,6 +18,7 @@ import testfixtures
 from lxml import etree
 
 from unittest.mock import patch, MagicMock
+from collections import defaultdict
 import random
 import unittest
 import functools
@@ -322,7 +323,7 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
                 else:
                     continue  # Ignore badly structured raw strings.
 
-    def check_author_editor_attr_assignemnt(self, processor_obj):
+    def check_title_series_attr_assignemnt(self, processor_obj):
         if processor_obj.isSeries():
             self.assertGreaterEqual(len(processor_obj.title), 1)
             self.assertGreaterEqual(len(processor_obj.series), 1)
@@ -330,13 +331,23 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
             self.assertGreaterEqual(len(processor_obj.title), 1)
             self.assertEqual(len(processor_obj.series), 0)
 
-    def test_method_isSeries(self):
+    def test_method_isSeries_specific(self):
         for expected_bool, raw_string in self.series_arg.items():
-            with self.subTest(criteria="specific"):
 
-                processor_obj = self.Processor(raw_string)
+            processor_obj = self.Processor(raw_string)
 
-                self.assertEqual(processor_obj.isSeries(), expected_bool)
+            self.assertEqual(processor_obj.isSeries(), expected_bool)
+
+    def test_method_isSeries_general(self):
+        tally = defaultdict(int)
+        expect_series_count = 1
+
+        for raw_string in self.strings:
+            processor_obj = self.Processor(raw_string)
+            tally[processor_obj.isSeries()] += 1
+
+        self.assertEqual(tally[True], expect_series_count)
+        self.assertEqual(tally[False], len(self.strings) - expect_series_count)
 
     def test_cls_method_split(self):
         cls_method = self.Processor.split

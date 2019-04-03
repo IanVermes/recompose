@@ -397,7 +397,17 @@ class ProcessorTitle(Processor):
         >>> ProcessorTitle.split(with_series)
         ['Illustrated puffins', 'Some journal: Volume III']
         """
-        raise NotImplementedError()
+        string = string.strip()
+        if cls._isSeries(string):
+            partialstring = string[:-1]
+            result = partialstring.rsplit(cls._FULLSTOP, 1)
+        else:
+            # Otherwise leave the string intact
+            result = [string, ""]
+        # Postprocess the strings.
+        for i, substring in enumerate(result):
+            result[i] = substring.strip().strip(cls._FULLSTOP)
+        return result
 
 
     def isValid(self):
@@ -430,7 +440,7 @@ class ProcessorTitle(Processor):
         # cond_seriesinfo_colon_proceded_by_volume (True)
         # cond_seriesinfo_volume_proceded_by_roman_numerals (True)
         # cond_seriesinfo_volume_abbreviated (True)
-        # cond_sting_has_volume_but_is_not_series (False) ## really just to warn of ambiguity
+        # cond_sting_has_volume_but_is_not_series (False) ## really just to warn of ambiguity  ## No bool
 
         # TODO - taken from ProcessorAuthors
         self._structure_report = set()
@@ -462,7 +472,11 @@ class ProcessorTitle(Processor):
         >>> complex_wrong.isSeries()
         True
         """
-        result = self._isSeries(self._raw_string)
+        try:
+            result = self._isSeries_cached
+        except AttributeError:
+            self._isSeries_cached = self._isSeries(self._raw_string)
+            result = self.isSeries()
         return result
 
     @classmethod
@@ -471,10 +485,12 @@ class ProcessorTitle(Processor):
             # cond_any_midstring_fullstop (True)
             # cond_has_seriesinfo_after_midstring_fullstop(True)
             # cond_has_colon_vol_after_midstring_fullstop(True)
+            # cond_has_colon_vol_after_final_midstring_fullstop(True)
         # cond_has_seriesinfo False PASS
             # cond_any_midstring_fullstop (True, False)
             # cond_has_seriesinfo_after_midstring_fullstop(False)
-            # cond_has_colon_vol_after_midstring_fullstop(False)
+            # cond_has_colon_vol_after_midstring_fullstop(True, False)
+            # cond_has_colon_vol_after_final_midstring_fullstop(False)
         test_funcs = [cls._has_midstring_fullstop,
                       cls._has_seriesinfo_after_midstring_fullstop,
                       cls._has_colonvol_after_midstring_fullstop,
@@ -482,7 +498,6 @@ class ProcessorTitle(Processor):
         battery = [f(string) for f in test_funcs]
         flag = all(battery)
         return flag
-
 
     def _assign_values(self):
         if self.isValid():
