@@ -397,16 +397,15 @@ class ProcessorTitle(Processor):
         >>> ProcessorTitle.split(with_series)
         ['Illustrated puffins', 'Some journal: Volume III']
         """
-        string = string.strip()
         if cls._isSeries(string):
-            partialstring = string[:-1]
-            result = partialstring.rsplit(cls._FULLSTOP, 1)
+            string = string.rstrip(cls._FULLSTOP)  # Don't strip other punct.
+            result = string.rsplit(cls._FULLSTOP, 1)
         else:
             # Otherwise leave the string intact
             result = [string, ""]
         # Postprocess the strings.
         for i, substring in enumerate(result):
-            result[i] = substring.strip().strip(cls._FULLSTOP)
+            result[i] = substring.strip().rstrip(cls._FULLSTOP)
         return result
 
 
@@ -461,6 +460,14 @@ class ProcessorTitle(Processor):
         else:
             return flag
 
+    def _maincond_ends_with_punctuation(self):
+        last_char = self._raw_string[-1]
+        flag = last_char in self._TERMINAL_PUNCTUATION
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
+        return flag
+
     def isSeries(self):
         """Boolean check: does object have series info?
 
@@ -505,14 +512,6 @@ class ProcessorTitle(Processor):
         else:
             for attr in self._data_attrs:
                 super().__setattr__(attr, str())
-
-    def _maincond_ends_with_punctuation(self):
-        last_char = self._raw_string[-1]
-        flag = last_char in self._TERMINAL_PUNCTUATION
-        # TODO injected error code/error detail is generic PLACEHOLDER
-        if not flag:
-            self._structure_report.add(self._INVALID_PLACEHOLDER)
-        return flag
 
     @classmethod
     def _has_midstring_fullstop(cls, string):
