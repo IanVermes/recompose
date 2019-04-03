@@ -420,10 +420,10 @@ class ProcessorTitle(Processor):
         >>> right.isValid()
         True
 
-        >>> complex_wrong = ProcessorTile("Journal: Volume XI. Some title.")
+        >>> complex_wrong = ProcessorTitle("Journal: Volume XI. Some title.")
         >>> complex_wrong.isValid()
         False
-        >>> complex_right = ProcessorTile("Some title. Journal: Volume XI.")
+        >>> complex_right = ProcessorTitle("Some title. Journal: Volume XI.")
         >>> complex_right.isValid()
         True
         """
@@ -468,8 +468,8 @@ class ProcessorTitle(Processor):
         >>> without_series.isSeries()
         False
 
-        >>> with_series = ProcessorTile("Hope: a story. Some Journal: Volume I.")
-        >>> complex_wrong.isSeries()
+        >>> with_series = ProcessorTitle("Hope: a story. Some Journal: Volume I.")
+        >>> with_series.isSeries()
         True
         """
         try:
