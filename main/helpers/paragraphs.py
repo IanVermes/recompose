@@ -388,7 +388,8 @@ class ProcessorTitle(Processor):
     _RGX_COLON_VOLUME = re.compile(r"(:\s*[Vv]ol)")
     _RGX_SERIES_ROMANDIGITS = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
     _RGX_SERIES_ARABICDIGITS = re.compile(r"(\:\svolume\s[1-9][0-9]{1,12}\.?)")
-    _RGX_RAW_ROMANNUMERALS = re.compile(r"(volume\s[ivxlcm]{1,13}\.?)")
+    _RGX_RAW_ROMANDIGITS = re.compile(r"(volume\s[ivxlcm]{1,13}\.?)")
+    _RGX_RAW_ARABICDIGITS = re.compile(r"(volume\s[1-9][0-9]{1,12}\.?)")
 
     @classmethod
     def split(cls, string):
@@ -411,7 +412,6 @@ class ProcessorTitle(Processor):
         for i, substring in enumerate(result):
             result[i] = substring.strip().rstrip(cls._FULLSTOP)
         return result
-
 
     def isValid(self):
         """Boolean check: does object pass validation?
@@ -502,6 +502,42 @@ class ProcessorTitle(Processor):
                 # TODO injected error code/error detail is generic PLACEHOLDER
                 self._structure_report.add(self._WARNING_PLACEHOLDER)
             return
+
+    def _cond_string_has_volume_digits_before_first_fullstop(self, rawstring, **_):
+        rawstring = rawstring.lower()
+        rgx_volumeroman = self._RGX_RAW_ROMANDIGITS
+        rgx_volumearabic = self._RGX_RAW_ARABICDIGITS
+        flag_multiple_fullstop = rawstring.count(self._FULLSTOP) > 1
+        if flag_multiple_fullstop:
+            first, *rest = rawstring.split(self._FULLSTOP, 1)
+            # Check for the pattern: if either is there, that's bad.
+            pattern_roman_absent = rgx_volumeroman.search(first) is None
+            pattern_arabic_absent = rgx_volumearabic.search(first) is None
+            flag_absent = pattern_roman_absent and pattern_arabic_absent
+            if not flag_absent:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return flag_absent
+        else:
+            # Nothing wrong with having only one fullstop.
+            return True
+
+    def _cond_string_has_volume_digits_before_first_colon(self, rawstring, **_):
+        rawstring = rawstring.lower()
+        rgx_volumeroman = self._RGX_RAW_ROMANDIGITS
+        rgx_volumearabic = self._RGX_RAW_ARABICDIGITS
+        flag_has_colon = rawstring.count(self._COLON) > 0
+        if flag_has_colon:
+            first, *rest = rawstring.split(self._COLON, 1)
+            # Check for the pattern: if either is there, that's bad.
+            pattern_roman_absent = rgx_volumeroman.search(first) is None
+            pattern_arabic_absent = rgx_volumearabic.search(first) is None
+            flag_absent = pattern_roman_absent and pattern_arabic_absent
+            if not flag_absent:
+                self._structure_report.add(self._INVALID_PLACEHOLDER)
+            return flag_absent
+        else:
+            # Nothing wrong with having no colons.
+            return True
 
     def _cond_seriesinfo_endswith_fulltstop(self, series, **_):
         if not len(series):
