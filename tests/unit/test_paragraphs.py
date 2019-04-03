@@ -323,7 +323,7 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
                 else:
                     continue  # Ignore badly structured raw strings.
 
-    def check_title_series_attr_assignemnt(self, processor_obj):
+    def check_title_series_attr_assignment(self, processor_obj):
         if processor_obj.isSeries():
             self.assertGreaterEqual(len(processor_obj.title), 1)
             self.assertGreaterEqual(len(processor_obj.series), 1)
