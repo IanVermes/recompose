@@ -385,6 +385,8 @@ class ProcessorTitle(Processor):
                              Processor._EXCLAMATIONMARK,
                              Processor._EXCLAMATIONMARK}
     _SERIES_SUBSTRINGS = {"volume", "vol"}
+    _RGX_COLON_VOLUME = re.compile(r"(:\s*[Vv]ol)")
+    _RGX_SERIES_ROMANNUMERALS = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
 
     @classmethod
     def split(cls, string):
@@ -535,7 +537,7 @@ class ProcessorTitle(Processor):
             return True
         else:
             series = series.lower()
-            rgx_volume_roman = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
+            rgx_volume_roman = self._RGX_SERIES_ROMANNUMERALS
             flag = bool(rgx_volume_roman.search(series))
             if not flag:
                 self._structure_report.add(self._INVALID_PLACEHOLDER)
@@ -630,7 +632,7 @@ class ProcessorTitle(Processor):
     def _has_colonvol_after_midstring_fullstop(cls, string, start=0):
         partialstring = string[:-1]
         titlelike, *rest = partialstring.split(cls._FULLSTOP)
-        rgx_colonvol = re.compile(r"(:\s*[Vv]ol)")
+        rgx_colonvol = cls._RGX_COLON_VOLUME
         if not rest:
             return False
         else:
