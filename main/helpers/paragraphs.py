@@ -34,6 +34,9 @@ class Processor(abc.ABC):
     _COMMASPACE = ", "
     _OXFORDCOMMA = ", and"
     _OXFORDAND = _OXFORDCOMMA + " "
+    _FULLSTOP = "."
+    _QUESTIONMARK = "?"
+    _EXCLAMATIONMARK = "!"
     _VALID_REPORT = (0, "")
     _INVALID_PLACEHOLDER = (1, "DETAIL TO ADD TO EXCEPTION STRING")  # TODO
     _CONDITIONAL_METHOD = "_cond"
@@ -378,6 +381,10 @@ class ProcessorTitle(Processor):
     """
     _pre_attr_name = "italic"
     _data_attrs = set("title series".split())
+    _TERMINAL_PUNCTUATION = {Processor._FULLSTOP,
+                             Processor._EXCLAMATIONMARK,
+                             Processor._EXCLAMATIONMARK}
+    _SERIES_SUBSTRINGS = {"volume", "vol"}
 
     @classmethod
     def split(cls, string):
@@ -413,35 +420,36 @@ class ProcessorTitle(Processor):
         return super().isValid()
 
     def _isValid(self):
-        self.__structure_result = None
-        # TODO
-        # cond_series_info True PASS
-        # cond_series_info False PASS
-
-        # cond_endswith_fullstop (True, False)
-        # cond_colon_count (True)
-        # cond_colon_preceded_by_fullstop (True)
-        # cond_volume_preceded_by_fullstop (True)
-        # cond_volume_ambiguity?
+        # TODO - ideas
+        # cond_string_endswith_punctuation (True False)  ## maincond!
+        # cond_title_endswith_punctuation (True, False)
+        # cond_title_no_volume (True, False)
+        # cond_seriesinfo_endswith_fulltstop (True)
+        # cond_seriesinfo_colon_count (True)
+        # cond_seriesinfo_colon_proceded_by_fullstop (True)
+        # cond_seriesinfo_colon_proceded_by_volume (True)
+        # cond_seriesinfo_volume_proceded_by_roman_numerals (True)
+        # cond_seriesinfo_volume_abbreviated (True)
+        # cond_sting_has_volume_but_is_not_series (False) ## really just to warn of ambiguity
 
         # TODO - taken from ProcessorAuthors
-        # self._structure_report = set()
-        #
-        # main_flag = self._maincond_count_commas()
-        # if main_flag:
-        #     prefix = self._CONDITIONAL_METHOD
-        #     cond_methods = [getattr(self, name) for name in dir(self)
-        #                     if name.startswith(prefix)]
-        #     iter_bool = (m() for m in cond_methods)
-        #     secondary_flag = all([b for b in iter_bool if b is not None])
-        #     flag = secondary_flag and main_flag
-        # else:
-        #     flag = main_flag
-        # if flag:
-        #     self._structure_report.add(self._VALID_REPORT)
-        #     return flag
-        # else:
-        #     return flag
+        self._structure_report = set()
+
+        main_flag = self._maincond_ends_with_punctuation()
+        if main_flag:
+            prefix = self._CONDITIONAL_METHOD
+            cond_methods = [getattr(self, name) for name in dir(self)
+                            if name.startswith(prefix)]
+            iter_bool = (m() for m in cond_methods)
+            secondary_flag = all([b for b in iter_bool if b is not None])
+            flag = secondary_flag and main_flag
+        else:
+            flag = main_flag
+        if flag:
+            self._structure_report.add(self._VALID_REPORT)
+            return flag
+        else:
+            return flag
 
     def isSeries(self):
         """Boolean check: does object have series info?
@@ -454,10 +462,91 @@ class ProcessorTitle(Processor):
         >>> complex_wrong.isSeries()
         True
         """
-        raise NotImplementedError()
+        result = self._isSeries(self._raw_string)
+        return result
+
+    @classmethod
+    def _isSeries(cls, string):
+        # cond_has_seriesinfo True PASS
+            # cond_any_midstring_fullstop (True)
+            # cond_has_seriesinfo_after_midstring_fullstop(True)
+            # cond_has_colon_vol_after_midstring_fullstop(True)
+        # cond_has_seriesinfo False PASS
+            # cond_any_midstring_fullstop (True, False)
+            # cond_has_seriesinfo_after_midstring_fullstop(False)
+            # cond_has_colon_vol_after_midstring_fullstop(False)
+        test_funcs = [cls._has_midstring_fullstop,
+                      cls._has_seriesinfo_after_midstring_fullstop,
+                      cls._has_colonvol_after_midstring_fullstop,
+                      cls._has_colonvol_after_final_midstring_fullstop]
+        battery = [f(string) for f in test_funcs]
+        flag = all(battery)
+        return flag
+
 
     def _assign_values(self):
-        raise NotImplementedError()
+        if self.isValid():
+            self.title, self.series = self.split(self._raw_string)
+        else:
+            for attr in self._data_attrs:
+                super().__setattr__(attr, str())
+
+    def _maincond_ends_with_punctuation(self):
+        last_char = self._raw_string[-1]
+        flag = last_char in self._TERMINAL_PUNCTUATION
+        # TODO injected error code/error detail is generic PLACEHOLDER
+        if not flag:
+            self._structure_report.add(self._INVALID_PLACEHOLDER)
+        return flag
+
+    @classmethod
+    def _has_midstring_fullstop(cls, string):
+        partialstring = string[:-1]
+        flag = cls._FULLSTOP in partialstring
+        return flag
+
+    @classmethod
+    def _has_seriesinfo_after_midstring_fullstop(cls, string):
+        partialstring = string[:-1]
+        partialstring = partialstring.lower()
+        titlelike, *rest = partialstring.split(cls._FULLSTOP)
+        if not rest:
+            return False
+        else:
+            substrings_present = []
+            for fragment in rest:
+                for substring in cls._SERIES_SUBSTRINGS:
+                    if substring in fragment:
+                        substrings_present.append(True)
+                        break
+                else:
+                    substrings_present.append(False)
+            return any(substrings_present)
+
+    @classmethod
+    def _has_colonvol_after_final_midstring_fullstop(cls, string):
+        start = -1
+        result = cls._has_colonvol_after_midstring_fullstop(string, start)
+        return result
+
+    @classmethod
+    def _has_colonvol_after_midstring_fullstop(cls, string, start=0):
+        partialstring = string[:-1]
+        titlelike, *rest = partialstring.split(cls._FULLSTOP)
+        rgx_colonvol = re.compile(r"(:\s*[Vv]ol)")
+        if not rest:
+            return False
+        else:
+            pattern_present = []
+            for fragment in rest[start:]:
+                if len(rgx_colonvol.findall(fragment)):
+                    pattern_present.append(True)
+                    break
+            else:
+                pattern_present.append(False)
+            return any(pattern_present)
+
+
 
 
 class ProcessorMeta(Processor):
