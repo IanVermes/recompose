@@ -383,13 +383,14 @@ class ProcessorTitle(Processor):
     _data_attrs = set("title series".split())
     _TERMINAL_PUNCTUATION = {Processor._FULLSTOP,
                              Processor._EXCLAMATIONMARK,
-                             Processor._EXCLAMATIONMARK}
+                             Processor._QUESTIONMARK}
     _SERIES_SUBSTRINGS = {"volume", "vol"}
     _RGX_COLON_VOLUME = re.compile(r"(:\s*[Vv]ol)")
     _RGX_SERIES_ROMANDIGITS = re.compile(r"(\:\svolume\s[ivxlcm]{1,13}\.?)")
     _RGX_SERIES_ARABICDIGITS = re.compile(r"(\:\svolume\s[1-9][0-9]{1,12}\.?)")
     _RGX_RAW_ROMANDIGITS = re.compile(r"(volume\s[ivxlcm]{1,13}\.?)")
     _RGX_RAW_ARABICDIGITS = re.compile(r"(volume\s[1-9][0-9]{1,12}\.?)")
+    _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.\?\!])([\.\?\!]$)")
 
     @classmethod
     def split(cls, string):
@@ -458,7 +459,11 @@ class ProcessorTitle(Processor):
 
     def _maincond_ends_with_punctuation(self):
         last_char = self._raw_string[-1]
-        flag = last_char in self._TERMINAL_PUNCTUATION
+        flag_terminal = last_char in self._TERMINAL_PUNCTUATION
+
+        rgx_penultimate = self._RGX_RAW_TERMINAL_PUNCT
+        flag_penultimate = bool(rgx_penultimate.search(self._raw_string))
+        flag = flag_terminal and flag_penultimate
         # TODO injected error code/error detail is generic PLACEHOLDER
         if not flag:
             self._structure_report.add(self._INVALID_PLACEHOLDER)
@@ -614,16 +619,6 @@ class ProcessorTitle(Processor):
 
     @classmethod
     def _isSeries(cls, string):
-        # cond_has_seriesinfo True PASS
-            # cond_any_midstring_fullstop (True)
-            # cond_has_seriesinfo_after_midstring_fullstop(True)
-            # cond_has_colon_vol_after_midstring_fullstop(True)
-            # cond_has_colon_vol_after_final_midstring_fullstop(True)
-        # cond_has_seriesinfo False PASS
-            # cond_any_midstring_fullstop (True, False)
-            # cond_has_seriesinfo_after_midstring_fullstop(False)
-            # cond_has_colon_vol_after_midstring_fullstop(True, False)
-            # cond_has_colon_vol_after_final_midstring_fullstop(False)
         test_funcs = [cls._has_midstring_fullstop,
                       cls._has_seriesinfo_after_midstring_fullstop,
                       cls._has_colonvol_after_midstring_fullstop,
