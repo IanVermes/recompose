@@ -547,6 +547,14 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
 
             self.assertDictEqual(expected, result)
 
+    def test_cls_method_count_fullstop(self):
+        self.assertEqual(self.Processor.count_fullstop(""), 0)
+        self.assertEqual(self.Processor.count_fullstop("."), 1)
+        self.assertEqual(self.Processor.count_fullstop("." * 5), 5)
+
+        string = self.strucural_arg["good"]
+        self.assertEqual(self.Processor.count_fullstop(string), 6)
+
 class Test_PreProcessed(ParagraphsTestCase):
 
     def setUp(self):

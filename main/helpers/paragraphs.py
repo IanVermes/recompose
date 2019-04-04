@@ -691,6 +691,11 @@ class ProcessorMeta(Processor):
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
     @classmethod
+    def count_fullstop(cls, string):
+        count = string.count(cls._FULLSTOP)
+        return count
+
+    @classmethod
     def split(cls, string):
         """Split a meta-data string into a dictionary.
 
