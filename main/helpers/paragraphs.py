@@ -688,6 +688,7 @@ class ProcessorMeta(Processor):
     _data_attrs = set(("illustrator translator extra publisher publplace year "
                        "pages price isbn issn").split())
     _extra_attrs = set("illustrator translator".split())
+    _RGX_SEARCH_ISBN = re.compile(r"([Ii][Ss][Bb][Nn]\s[0-9\s]{5,})")
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
     @classmethod
@@ -725,7 +726,29 @@ class ProcessorMeta(Processor):
         >>> out['pages']
         'xiv, 351 pp'
         """
-        pass
+        result = dict()
+        fullstops = cls.count_fullstop(string)
+        if 0 <= fullstops < 6:
+            pass
+        elif fullstops >= 6:
+            pass
+        result["isbn"] = cls._search_isbn(string)
+        return result
+
+    @classmethod
+    def _get_matchobject_group(cls, match, group=1, default=""):
+        if match is None:
+            return default
+        else:
+            result = match.group(group)
+            return result
+
+    @classmethod
+    def _search_isbn(cls, string):
+        match = cls._RGX_SEARCH_ISBN.search(string)
+        substring = cls._get_matchobject_group(match)
+        return substring
+
 
     def isValid(self):
         """Boolean check: does object pass validation?

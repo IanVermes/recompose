@@ -555,6 +555,19 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
         string = self.strucural_arg["good"]
         self.assertEqual(self.Processor.count_fullstop(string), 6)
 
+    def test_cls_search_isbn(self):
+        method = self.Processor._search_isbn
+        setup = [("good", "ISBN 978 0 25303 835 7"),
+                 ("bad", "ISBN 978 9 60888 539 4")
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.strucural_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
+
 class Test_PreProcessed(ParagraphsTestCase):
 
     def setUp(self):
