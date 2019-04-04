@@ -682,16 +682,62 @@ class ProcessorTitle(Processor):
             return any(pattern_present)
 
 
-
-
 class ProcessorMeta(Processor):
     """Processor for meta-data from a string or PreProcessed object."""
     _pre_attr_name = "post_italic"
     _data_attrs = set(("illustrator translator publisher publplace year "
                        "pages price isbn issn").split())
+    _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
+
+    @classmethod
+    def split(cls, string):
+        """Split a meta-data string into a dictionary.
+
+        >>> metadata = "Translated by David Ball. Oxford University Press, Oxford, 2018. 368 pp. £25.00. ISBN 978 0 19049 954 9."
+        >>> out = ProcessorMeta.split(metadata)
+        >>> out['pubplace']
+        'Oxford University Press, Oxford'
+        >>> out['pubyear']
+        '2018'
+        >>> out['pages']
+        '368 pp'
+        >>> out['price']
+        '£25.00'
+        >>> out['isbn']
+        'ISBN 978 0 19049 954 9'
+        >>> out['extra']
+        'Translated by David Ball'
+
+        >>> metadata = "Princeton University Press, Princeton NJ, 2018. xiv, 351 pp. £32.95. ISBN 9780 69117 498 3."
+        >>> out = ProcessorMeta.split(metadata)
+        >>> out['extra']
+        ''
+        >>> out['pages']
+        'xiv, 351 pp'
+        """
+        pass
+
+    def isValid(self):
+        """Boolean check: does object pass validation?
+
+        >>> wrong = ProcessorMeta("Editorial Trotta, Madrid, 2018. 403 pp. €38.00 ISBN 978 8 49879 738 1.")
+        >>> wrong.isValid()
+        False
+        >>> right = ProcessorMeta("Bloomsbury T&T Clark, London, 2019. xiv, 657 pp. £130.00. ISBN 978 0 56735 205 7.")
+        >>> right.isValid()
+        True
+
+        >>> complex_wrong = ProcessorMeta("Schocken Books. New York, 2017. xiv, 824 pp. £32.00. ISBN 978 0 880524 237 9.")
+        >>> complex_wrong.isValid()
+        False
+        >>> complex_right = ProcessorMeta("Translated by Michaela Lang. Indiana University Press, Bloomington IN, 2018. ix, 161 pp. $65.00. ISBN 978 0 25303 835 7.")
+        >>> complex_right.isValid()
+        True
+        """
+        pass
 
     def _isValid(self):
-        self.__structure_result = None
+        self._structure_report = set()
         # cond_section_count < 2 FAIL
         # cond_section_count == 4 PASS
         # cond_section_count == 5 PASS
