@@ -378,7 +378,6 @@ class Test_ProcessorTitle_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Ge
             self.assertListEqual(expected, result)
 
 
-@unittest.skip("For now")
 class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Genuine):
 
     @classmethod
@@ -437,7 +436,7 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
             self.assertTrue(processor_obj.isValid(), msg="Precondition")
             self.check_extra_attr_assignment(processor_obj)
 
-    def test_assignement_of_extra_attributes_generic(self, processor_obj):
+    def test_assignement_of_extra_attributes_generic(self):
         for raw_string in self.strings:
             processor_obj = self.Processor(raw_string)
 
@@ -534,7 +533,7 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
 
         with self.subTest(criteria="split - bad"):
             expected = {"publisher": "The Jewish Museum of Greece",
-                        "publplace": "Athens,
+                        "publplace": "Athens",
                         "year": "2018",
                         "pages": "312 pp",
                         "price": "",
