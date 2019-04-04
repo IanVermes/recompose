@@ -398,6 +398,155 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
         cls.strucural_arg["bad"] = ("The Jewish Museum of Greece, Athens, "
                                     "2018. 312 pp. ISBN 978 9 60888 539 4.")
 
+        cls.extra_arg = {}
+        cls.extra_arg[True] = cls.strucural_arg["good"]
+        cls.extra_arg[False] = ("Brill, Leiden, 2018. xiii, 240 pp. €94.00. "
+                                "ISBN 978 9 00434 447 1.")
+
+        cls.illustrator_translator_arg = {}
+        cls.illustrator_translator_arg["illustrator"] = ("Illustrated by Kristine A. Thorsen. Northwestern University Press, Evanston IL, 2018. xii, 642 pp. $45.00. ISBN 978 0 81012 607 7.")
+        cls.illustrator_translator_arg["translator"] = cls.strucural_arg["good"]
+
+    @staticmethod
+    def get_strings_by_attr(obj, attrs):
+        "Helper func to retrieve object strings from a list of attribute names."
+        for attr in attrs:
+            yield getattr(obj, attr)
+
+    def test_assignement_of_extra_attributes_specifc(self):
+        extra_attrs = set("extra translator illustrator".split())
+        non_extra_attrs = self.Processor._data_attrs - extra_attrs
+
+        for extra_flag, raw_string in self.extra_arg.items():
+            processor_obj = self.Processor(raw_string)
+            self.assertEqual(processor_obj.isExtra(),
+                             extra_flag,
+                             msg="Precondtion")
+
+            # Test1: extra attributes are a string even if empty
+            query = self.get_strings_by_attr(processor_obj, extra_attrs)
+            is_string = all([isinstance(q, str) for q in query])
+            self.assertTrue(is_string)
+
+            # Test2a: non-extra attr have populated strings
+            query = self.get_strings_by_attr(processor_obj, non_extra_attrs)
+            is_notempty = all([len(q) > 0 for q in query])
+            self.assertTrue(is_notempty)
+
+            # Test2b: extra attrs are partially populated with strings
+            self.assertTrue(processor_obj.isValid(), msg="Precondition")
+            self.check_extra_attr_assignment(processor_obj)
+
+    def test_assignement_of_extra_attributes_generic(self, processor_obj):
+        for raw_string in self.strings:
+            processor_obj = self.Processor(raw_string)
+
+            if processor_obj.isValid():
+                self.check_extra_attr_assignment(processor_obj)
+            else:
+                continue  # Ignore badly structured raw strings.
+
+    def check_extra_attr_assignment(self, processor_obj):
+        attrs = processor_obj._extra_attrs
+        query = self.get_strings_by_attr(processor_obj, attrs)
+        if processor_obj.isExtra():
+            self.assertGreaterEqual(len(processor_obj.extra), 1)
+            any_notempty = any([len(q) > 0 for q in query])
+            self.assertTrue(any_notempty)
+        else:
+            self.assertEqual(len(processor_obj.extra), 0)
+            all_empty = any([len(q) == 0 for q in query])
+            self.assertTrue(all_empty)
+
+    def test_assignment_of_translator_illustrator_attributes(self):
+        for key_string, raw_string in self.illustrator_translator_arg.items():
+            obj = self.Processor(raw_string)
+
+            self.asserTrue(obj.isExtra(), msg="Precondtion")
+            self.asserTrue(obj.isValid(), msg="Precondtion")
+            self.assertIn(key_string, obj._extra_attrs, msg="Precondtion")
+
+            # Test1: Assignment is to the correct attribute
+            value = getattr(obj, key_string)  # key_string == an attr of obj
+            self.assertGreater(len(value), 0)
+
+            # Test2: Other extra attrs are left empty
+            other_attrs = obj._extra_attrs - set([key_string])
+            query = self.get_strings_by_attr(obj, other_attrs)
+            all_empty = any([len(q) == 0 for q in query])
+            self.assertTrue(all_empty)
+
+    def test_method_isExtra(self):
+        for key in ["illustrator", "translator"]:
+            msg = f"Positive method result for '{key}'"
+            with self.subTest(criteria=msg):
+                string = self.illustrator_translator_arg[key]
+
+                processor_obj = self.Processor(string)
+                flag = processor_obj.isExtra()
+
+                self.assertTrue(flag)
+                self.assertIs(flag, True)
+
+        with self.subTest(criteria="Negative method result"):
+            string = self.extra_arg[False]
+
+            processor_obj = self.Processor(string)
+            flag = processor_obj.isExtra()
+
+            self.assertFalse(flag)
+            self.assertIs(flag, False)
+
+    def test_cls_method_split(self):
+        cls_method = self.Processor.split
+        with self.subTest(criteria="split - good, no extra"):
+            expected = {"publisher": "Brill",
+                        "publplace": "Leiden",
+                        "year": "2018",
+                        "pages": "xiii, 240 pp",
+                        "price": "€94.00",
+                        "isbn": "ISBN 978 9 00434 447 1",
+                        "issn": "",
+                        "extra": "",
+                        "translator": "",
+                        "illustrator": "",
+            }
+            result = cls_method(self.extra_arg[False])
+
+            self.assertDictEqual(expected, result)
+
+        with self.subTest(criteria="split - good, with extra"):
+            expected = {"publisher": "Indiana University Press",
+                        "publplace": "Bloomington IN",
+                        "year": "2018",
+                        "pages": "ix, 161 pp",
+                        "price": "$65.00",
+                        "isbn": "ISBN 978 0 25303 835 7",
+                        "issn": "",
+                        "extra": "Translated by Michaela Lang",
+                        "translator": "Michaela Lang",
+                        "illustrator": "",
+            }
+
+            result = cls_method(self.illustrator_translator_arg["translator"])
+
+            self.assertDictEqual(expected, result)
+
+        with self.subTest(criteria="split - bad"):
+            expected = {"publisher": "The Jewish Museum of Greece",
+                        "publplace": "Athens,
+                        "year": "2018",
+                        "pages": "312 pp",
+                        "price": "",
+                        "isbn": "ISBN 978 9 60888 539 4",
+                        "issn": "",
+                        "extra": "",
+                        "translator": "",
+                        "illustrator": "",
+            }
+            result = cls_method(self.strucural_arg["bad"])
+
+            self.assertDictEqual(expected, result)
 
 class Test_PreProcessed(ParagraphsTestCase):
 

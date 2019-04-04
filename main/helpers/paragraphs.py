@@ -685,8 +685,9 @@ class ProcessorTitle(Processor):
 class ProcessorMeta(Processor):
     """Processor for meta-data from a string or PreProcessed object."""
     _pre_attr_name = "post_italic"
-    _data_attrs = set(("illustrator translator publisher publplace year "
+    _data_attrs = set(("illustrator translator extra publisher publplace year "
                        "pages price isbn issn").split())
+    _extra_attrs = set("illustrator translator".split())
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
     @classmethod
@@ -709,6 +710,8 @@ class ProcessorMeta(Processor):
         'ISBN 978 0 19049 954 9'
         >>> out['extra']
         'Translated by David Ball'
+        >>> out['translator']
+        'David Ball'
 
         >>> metadata = "Princeton University Press, Princeton NJ, 2018. xiv, 351 pp. £32.95. ISBN 9780 69117 498 3."
         >>> out = ProcessorMeta.split(metadata)
