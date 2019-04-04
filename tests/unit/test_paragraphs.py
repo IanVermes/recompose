@@ -567,6 +567,18 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
                 result = method(string)
                 self.assertEqual(expected, result)
 
+    def test_cls_search_price(self):
+        method = self.Processor._search_price
+        setup = [("good", "$65.00"),
+                 ("bad", "")
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.strucural_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
 
 class Test_PreProcessed(ParagraphsTestCase):
 

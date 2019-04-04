@@ -689,6 +689,7 @@ class ProcessorMeta(Processor):
                        "pages price isbn issn").split())
     _extra_attrs = set("illustrator translator".split())
     _RGX_SEARCH_ISBN = re.compile(r"([Ii][Ss][Bb][Nn]\s[0-9\s]{5,})")
+    _RGX_SEARCH_PRICE = re.compile(r"([\$\£\€\₪]\s?[0-9]{1,}\.[0-9]{2})")
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
     @classmethod
@@ -733,6 +734,7 @@ class ProcessorMeta(Processor):
         elif fullstops >= 6:
             pass
         result["isbn"] = cls._search_isbn(string)
+        result["price"] = cls._search_price(string)
         return result
 
     @classmethod
@@ -746,6 +748,12 @@ class ProcessorMeta(Processor):
     @classmethod
     def _search_isbn(cls, string):
         match = cls._RGX_SEARCH_ISBN.search(string)
+        substring = cls._get_matchobject_group(match)
+        return substring
+
+    @classmethod
+    def _search_price(cls, string):
+        match = cls._RGX_SEARCH_PRICE.search(string)
         substring = cls._get_matchobject_group(match)
         return substring
 
