@@ -695,9 +695,11 @@ class ProcessorMeta(Processor):
 
         >>> metadata = "Translated by David Ball. Oxford University Press, Oxford, 2018. 368 pp. £25.00. ISBN 978 0 19049 954 9."
         >>> out = ProcessorMeta.split(metadata)
+        >>> out['publisher']
+        'Oxford University Press'
         >>> out['pubplace']
-        'Oxford University Press, Oxford'
-        >>> out['pubyear']
+        'Oxford'
+        >>> out['year']
         '2018'
         >>> out['pages']
         '368 pp'
