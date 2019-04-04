@@ -570,7 +570,19 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
     def test_cls_search_price(self):
         method = self.Processor._search_price
         setup = [("good", "$65.00"),
-                 ("bad", "")
+                 ("bad", "")  # Deliberately empty.
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.strucural_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
+    def test_cls_search_pages(self):
+        method = self.Processor._search_pages
+        setup = [("good", "ix, 161 pp"),
+                 ("bad", "312 pp")
         ]
 
         for key, expected in setup:
