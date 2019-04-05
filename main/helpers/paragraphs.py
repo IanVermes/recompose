@@ -742,6 +742,7 @@ class ProcessorMeta(Processor):
         result["isbn"] = cls._search_isbn(string)
         result["price"] = cls._search_price(string)
         result["pages"] = cls._search_pages(string)
+        result["year"] = cls._search_year(string)
         return result
 
     @classmethod
