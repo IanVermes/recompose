@@ -24,7 +24,7 @@ import unittest
 import functools
 import itertools
 import os
-
+§
 
 PREPROCESSED_CONFIG = {
     "pre_italic": "Berthelot, Katell, Michaël Langlois and Thierry Legrand,",
