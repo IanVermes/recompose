@@ -693,8 +693,8 @@ class ProcessorMeta(Processor):
     _RGX_SEARCH_PAGES = re.compile(r"((?:[XxVvIiCcMmLl]{1,}\s?\,?\s?)?[0-9]{1,}\s[Pp]{2})")
     _RGX_SEARCH_YEAR = re.compile(r"(?:\b\w{1,},\s)(\b[12][0-9]{3}\b)")
     _RGX_SEARCH_PUBPLACE = re.compile(r"()")
-    _RGX_SEARCH_PUBLISHER = re.compile(r"()")
-    _RGX_SEARCH_EXTRA = re.compile(r"()")
+    _RGX_SEARCH_PUBLISHER = re.compile(r"(^.{1,}(?=,(?:\s\b[\w-]{1,})+,?\s\b[12][0-9]{3}\b))")
+    _RGX_DEEPSEARCH_PUBLISHER = re.compile(r"(?:\.\ )?((?:\b\w+\ ?)+$)")
     _RGX_SEARCH_ISSN = re.compile(r"()")
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
@@ -734,11 +734,7 @@ class ProcessorMeta(Processor):
         'xiv, 351 pp'
         """
         result = dict()
-        fullstops = cls.count_fullstop(string)
-        if 0 <= fullstops < 6:
-            pass
-        elif fullstops >= 6:
-            pass
+        result["publisher"] = cls._search_publisher(string)
         result["isbn"] = cls._search_isbn(string)
         result["price"] = cls._search_price(string)
         result["pages"] = cls._search_pages(string)
@@ -776,6 +772,26 @@ class ProcessorMeta(Processor):
         match = cls._RGX_SEARCH_YEAR.search(string)
         substring = cls._get_matchobject_group(match)
         return substring
+
+    @classmethod
+    def _search_publisher(cls, string):
+        match = cls._RGX_SEARCH_PUBLISHER.search(string)
+        substring = cls._get_matchobject_group(match)
+        # The pattern will find a substring which satisfies the 'extra 'data
+        # and not just the 'publisher' data. I.e. both extra and publisher data
+        # may be in the substring. Thus secondary pattern matching is necessary.
+        fullstops = cls.count_fullstop(string)
+        string_low = string.lower()
+        fullstop_count_flag = 0 <= fullstops < 6
+        contain_flag = "illustra" in string_low or "translat" in string_low
+
+        if fullstop_count_flag and not contain_flag:
+            return substring
+        else:
+            match2 = cls._RGX_DEEPSEARCH_PUBLISHER.search(substring)
+            substring2 = cls._get_matchobject_group(match2)
+            return substring2
+
 
 
     def isValid(self):

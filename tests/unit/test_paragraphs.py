@@ -602,6 +602,18 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
                 result = method(string)
                 self.assertEqual(expected, result)
 
+    def test_cls_search_publisher(self):
+        method = self.Processor._search_publisher
+        setup = [("good", "Indiana University Press"),
+                 ("bad", "The Jewish Museum of Greece")
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.strucural_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
 class Test_PreProcessed(ParagraphsTestCase):
 
     def setUp(self):
