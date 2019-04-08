@@ -697,6 +697,8 @@ class ProcessorMeta(Processor):
     _RGX_DEEPSEARCH_PUBLISHER = re.compile(r"(?:\.\ )?((?:\b\w+\ ?)+$)")
     _RGX_DEEPSEARCH_EXTRA = re.compile(r"((?:[Tt]ranslat|[Ii]llustra).+?)(?=(?:\.\ )?(?:\b\w+\ ?)+$)")
     _RGX_SEARCH_ISSN = re.compile(r"()")
+    _RGX_DEEPSEARCH_ILLUSTRATOR = re.compile(r"(?:[Ii]llustra\w+\ by\ )(.+)")
+    _RGX_DEEPSEARCH_TRANSLATOR = re.compile(r"(?:[Tt]ranslat\w+\ by\ )(.+)")
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
     @classmethod
@@ -741,6 +743,8 @@ class ProcessorMeta(Processor):
         result["pages"] = cls._search_pages(string)
         result["year"] = cls._search_year(string)
         result["extra"] = cls._search_extra(string)
+        result["illustrator"] = cls._search_illustrator(string)
+        result["translator"] = cls._search_translator(string)
         return result
 
     @classmethod
@@ -806,6 +810,25 @@ class ProcessorMeta(Processor):
         substring2 = cls._get_matchobject_group(match)
         return substring2
 
+    @classmethod
+    def _search_illustrator(cls, string):
+        extrainfo = cls._search_extra(string)
+        if extrainfo:
+            match = cls._RGX_DEEPSEARCH_ILLUSTRATOR.search(extrainfo)
+            substring = cls._get_matchobject_group(match)
+        else:
+            substring = str()
+        return substring
+
+    @classmethod
+    def _search_translator(cls, string):
+        extrainfo = cls._search_extra(string)
+        if extrainfo:
+            match = cls._RGX_DEEPSEARCH_TRANSLATOR.search(extrainfo)
+            substring = cls._get_matchobject_group(match)
+        else:
+            substring = str()
+        return substring
 
 
     def isValid(self):

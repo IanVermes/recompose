@@ -626,6 +626,30 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
                 result = method(string)
                 self.assertEqual(expected, result)
 
+    def test_cls_search_illustrator(self):
+        method = self.Processor._search_illustrator
+        setup = [("illustrator", "Kristine A. Thorsen"),
+                 ("translator", "")
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.illustrator_translator_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
+    def test_cls_search_translator(self):
+        method = self.Processor._search_translator
+        setup = [("illustrator", ""),
+                 ("translator", "Michaela Lang")
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.illustrator_translator_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
 class Test_PreProcessed(ParagraphsTestCase):
 
     def setUp(self):
