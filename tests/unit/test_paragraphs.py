@@ -405,6 +405,12 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
         cls.illustrator_translator_arg["illustrator"] = ("Illustrated by Kristine A. Thorsen. Northwestern University Press, Evanston IL, 2018. xii, 642 pp. $45.00. ISBN 978 0 81012 607 7.")
         cls.illustrator_translator_arg["translator"] = cls.strucural_arg["good"]
 
+        cls.issn_isbn_arg = {}
+        cls.issn_isbn_arg["issn"] = ("The Hebrew University of Jerusalem, "
+                                     "Jerusalem, 2018. x, 660 pp. $120.00. "
+                                     "ISSN 0793 4289.")
+        cls.issn_isbn_arg["isbn"] = cls.strucural_arg["good"]
+
     @staticmethod
     def get_strings_by_attr(obj, attrs):
         "Helper func to retrieve object strings from a list of attribute names."
@@ -563,6 +569,18 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
         for key, expected in setup:
             with self.subTest(criteria=f"structure is {key}"):
                 string = self.strucural_arg[key]
+                result = method(string)
+                self.assertEqual(expected, result)
+
+    def test_cls_search_issn(self):
+        method = self.Processor._search_issn
+        setup = [("issn", "ISSN 0793 4289"),
+                 ("isbn", "")
+        ]
+
+        for key, expected in setup:
+            with self.subTest(criteria=f"structure is {key}"):
+                string = self.issn_isbn_arg[key]
                 result = method(string)
                 self.assertEqual(expected, result)
 
