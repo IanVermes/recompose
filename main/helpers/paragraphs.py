@@ -695,6 +695,7 @@ class ProcessorMeta(Processor):
     _RGX_SEARCH_PUBPLACE = re.compile(r"()")
     _RGX_SEARCH_PUBLISHER = re.compile(r"(^.{1,}(?=,(?:\s\b[\w-]{1,})+,?\s\b[12][0-9]{3}\b))")
     _RGX_DEEPSEARCH_PUBLISHER = re.compile(r"(?:\.\ )?((?:\b\w+\ ?)+$)")
+    _RGX_DEEPSEARCH_EXTRA = re.compile(r"((?:[Tt]ranslat|[Ii]llustra).+?)(?=(?:\.\ )?(?:\b\w+\ ?)+$)")
     _RGX_SEARCH_ISSN = re.compile(r"()")
     _RGX_RAW_TERMINAL_PUNCT = re.compile(r"(?:[^\.])([\.]$)")
 
@@ -739,6 +740,7 @@ class ProcessorMeta(Processor):
         result["price"] = cls._search_price(string)
         result["pages"] = cls._search_pages(string)
         result["year"] = cls._search_year(string)
+        result["extra"] = cls._search_extra(string)
         return result
 
     @classmethod
@@ -791,6 +793,18 @@ class ProcessorMeta(Processor):
             match2 = cls._RGX_DEEPSEARCH_PUBLISHER.search(substring)
             substring2 = cls._get_matchobject_group(match2)
             return substring2
+
+    @classmethod
+    def _search_extra(cls, string):
+        # The easiest way to find extra info is by finding the publisher info
+        # with the publisher rgx pattern as this pattern satisfies both extra
+        # and publisher info.
+        match = cls._RGX_SEARCH_PUBLISHER.search(string)
+        substring = cls._get_matchobject_group(match)
+        # The deepsearch extra pattern uses positive look ahead, to find the publisher info and the select up to the publisher info pattern but no further.
+        match = cls._RGX_DEEPSEARCH_EXTRA.search(substring)
+        substring2 = cls._get_matchobject_group(match)
+        return substring2
 
 
 
