@@ -49,7 +49,7 @@ class Test_Processor_Classes(BaseTestCase):
         expected_attrs = {"authors": "authors editors",
                           "title": "title series",
                           "meta": ("illustrator translator "
-                                   "publisher publplace year "
+                                   "publisher pubplace year "
                                    "pages price isbn")}
         for attr_group, attr in expected_attrs.items():
             expected_attrs[attr_group] = attr.split()
@@ -499,7 +499,7 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
         cls_method = self.Processor.split
         with self.subTest(criteria="split - good, no extra"):
             expected = {"publisher": "Brill",
-                        "publplace": "Leiden",
+                        "pubplace": "Leiden",
                         "year": "2018",
                         "pages": "xiii, 240 pp",
                         "price": "€94.00",
@@ -515,7 +515,7 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
 
         with self.subTest(criteria="split - good, with extra"):
             expected = {"publisher": "Indiana University Press",
-                        "publplace": "Bloomington IN",
+                        "pubplace": "Bloomington IN",
                         "year": "2018",
                         "pages": "ix, 161 pp",
                         "price": "$65.00",
@@ -532,7 +532,7 @@ class Test_ProcessorMeta_Class(ProcessorTestCase_Abstract, ProcessorTestCase_Gen
 
         with self.subTest(criteria="split - bad"):
             expected = {"publisher": "The Jewish Museum of Greece",
-                        "publplace": "Athens",
+                        "pubplace": "Athens",
                         "year": "2018",
                         "pages": "312 pp",
                         "price": "",

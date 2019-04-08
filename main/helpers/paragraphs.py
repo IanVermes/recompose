@@ -685,7 +685,7 @@ class ProcessorTitle(Processor):
 class ProcessorMeta(Processor):
     """Processor for meta-data from a string or PreProcessed object."""
     _pre_attr_name = "post_italic"
-    _data_attrs = set(("illustrator translator extra publisher publplace year "
+    _data_attrs = set(("illustrator translator extra publisher pubplace year "
                        "pages price isbn issn").split())
     _extra_attrs = set("illustrator translator".split())
     _RGX_SEARCH_ISBN = re.compile(r"([Ii][Ss][Bb][Nn]\s[0-9\s]{5,})")
